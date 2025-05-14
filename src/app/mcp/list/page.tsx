@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
-import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 
 type McpServer = {
   id: string;
@@ -10,34 +10,35 @@ type McpServer = {
   description?: string;
 };
 
-export default function McpListPage() {
-  useAuthRedirect();
-
+export default function McpServerListPage() {
+  const router = useRouter();
   const [servers, setServers] = useState<McpServer[]>([]);
   const [error, setError] = useState("");
 
+  const fetchServers = async () => {
+    try {
+      const res = await fetch("http://localhost:8000/mcp/servers", {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("取得失敗");
+      setServers(await res.json());
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("http://localhost:8000/mcp/servers", {
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("Fetch failed");
-        setServers(await res.json());
-      } catch (e: any) {
-        setError("Error: " + e.message);
-      }
-    })();
+    fetchServers();
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("削除してもよろしいですか？")) return;
-    const res = await fetch(`http://localhost:8000/mcp/servers/${id}`, {
+    if (!confirm("本当に削除しますか？")) return;
+    const res = await fetch(`http://localhost:8000/mcp/servers/delete/${id}`, {
       method: "DELETE",
       credentials: "include",
     });
-    if (res.status === 204) {
-      setServers(servers.filter((s) => s.id !== id));
+    if (res.ok) {
+      setServers(servers.filter(s => s.id !== id));
     } else {
       alert("削除失敗");
     }
@@ -46,26 +47,37 @@ export default function McpListPage() {
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900">
       <Header />
-      <main className="p-8 max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold mb-4">MCP サーバー一覧</h1>
-        {error && <p className="text-red-600">{error}</p>}
-        <ul className="space-y-4">
-          {servers.map((s) => (
-            <li key={s.id} className="bg-white p-4 rounded shadow flex justify-between">
+      <main className="p-6 max-w-4xl mx-auto">
+        <h2 className="text-2xl font-bold mb-4">🛠 MCP servers</h2>
+        {error && <p className="text-red-600 mb-4">{error}</p>}
+        <div className="space-y-4">
+          {servers.map(s => (
+            <div
+              key={s.id}
+              className="bg-white p-4 rounded shadow flex justify-between items-center"
+            >
               <div>
-                <p className="font-semibold">{s.name}</p>
+                <h3 className="font-semibold">{s.name}</h3>
                 <p className="text-sm text-gray-600">{s.url}</p>
                 {s.description && <p className="text-sm">{s.description}</p>}
               </div>
-              <button
-                onClick={() => handleDelete(s.id)}
-                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
-              >
-                削除
-              </button>
-            </li>
+              <div className="space-x-2">
+                <button
+                  onClick={() => router.push(`/mcp/servers/${s.id}/tools`)}
+                  className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                >
+                  tools
+                </button>
+                <button
+                  onClick={() => handleDelete(s.id)}
+                  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                >
+                  delete
+                </button>
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       </main>
     </div>
   );

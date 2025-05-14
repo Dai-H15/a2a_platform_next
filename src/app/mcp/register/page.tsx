@@ -1,79 +1,102 @@
 "use client";
+
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
-import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 
-export default function McpRegisterPage() {
-  useAuthRedirect();
-
+export default function RegisterMcpServerPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [description, setDescription] = useState("");
-  const [msg, setMsg] = useState("");
+  const [type, setType] = useState<"sse" | "local">("sse");
+  const [error, setError] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMsg("");
+    setError(false);
+
     try {
-      const res = await fetch("http://localhost:8000/mcp/servers", {
+      const res = await fetch("http://localhost:8000/mcp/servers/regist", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, url, description }),
+        body: JSON.stringify({ name, url, description, type }),
       });
-      const data = await res.json();
-      if (res.ok) {
-        setMsg("登録成功: " + data.id);
-        setName("");
-        setUrl("");
-        setDescription("");
-      } else {
-        setMsg("登録失敗: " + (data.detail || JSON.stringify(data)));
+
+      if (!res.ok) {
+        // サーバーからのレスポンスは全て「エラーが発生しました」で隠蔽
+        setError(true);
+        return;
       }
-    } catch (e: any) {
-      setMsg("エラー: " + e.message);
+
+      router.push("/mcp/list");
+    } catch (e) {
+      // ネットワークエラーなども「エラーが発生しました」に統一
+      setError(true);
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900">
       <Header />
-      <main className="p-8 max-w-md mx-auto">
-        <h1 className="text-2xl font-bold mb-4">Register MCP Server</h1>
-        {msg && <p className="mb-4 text-blue-600">{msg}</p>}
+
+      <main className="p-6 max-w-2xl mx-auto">
+        <h2 className="text-2xl font-bold mb-4">➕ MCP server register</h2>
+
+        {error && (
+          <p className="text-red-600 mb-4">
+            登録に失敗しました。
+          </p>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block font-medium">Name</label>
             <input
-              className="w-full border rounded px-2 py-1"
+              className="w-full border p-2 rounded"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              required
             />
           </div>
+
           <div>
             <label className="block font-medium">URL</label>
             <input
-              className="w-full border rounded px-2 py-1"
-              type="url"
+              className="w-full border p-2 rounded"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              required
             />
           </div>
+
           <div>
             <label className="block font-medium">Description</label>
             <textarea
-              className="w-full border rounded px-2 py-1"
+              className="w-full border p-2 rounded"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
+
+          <div>
+            <label className="block font-medium">呼び出し方式</label>
+            <select
+              className="w-full border p-2 rounded"
+              value={type}
+              onChange={(e) =>
+                setType(e.target.value as "sse" | "local")
+              }
+            >
+              <option value="sse">SSE</option>
+              <option value="local">Local</option>
+            </select>
+          </div>
+
           <button
             type="submit"
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded"
+            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
           >
-            Submit
+            登録
           </button>
         </form>
       </main>

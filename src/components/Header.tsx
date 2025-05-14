@@ -39,7 +39,7 @@ export default function Header() {
   return (
     <header className="bg-white shadow-md py-4 px-6 flex justify-between items-center">
       <Link href="/">
-        <h1 className="text-2xl font-bold">A2A Router</h1>
+        <h1 className="text-2xl font-bold">A2A Routing Service</h1>
       </Link>
       <div className="text-sm flex items-center gap-4">
         {userEmail ? (
