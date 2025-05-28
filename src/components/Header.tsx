@@ -20,7 +20,7 @@ export default function Header() {
         } else {
           setUserEmail(null); // 未認証
         }
-      } catch (e) {
+      } catch {
         setUserEmail(null);
       }
     };

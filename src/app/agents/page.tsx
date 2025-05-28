@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
@@ -30,6 +31,8 @@ type AgentCard = {
     tags?: string[];
     examples?: string[];
   }[];
+  api_key?: string;
+  is_active?: boolean;
 };
 
 export default function AgentsPage() {
@@ -37,6 +40,10 @@ export default function AgentsPage() {
 
   const [agents, setAgents] = useState<AgentCard[]>([]);
   const [error, setError] = useState<string>("");
+  const [editingKeys, setEditingKeys] = useState<Record<string, string>>({});
+  const [savingKey, setSavingKey] = useState<Record<string, boolean>>({});
+  const [storeChecked, setStoreChecked] = useState<Record<string, boolean>>({});
+  const [publishing, setPublishing] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchAgents();
@@ -51,12 +58,21 @@ export default function AgentsPage() {
         setError("Not authenticated. Please login.");
         return;
       }
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setAgents(data);
-      } else {
+      const data: AgentCard[] = await res.json();
+      if (!Array.isArray(data)) {
         throw new Error("Response is not an array");
       }
+      setAgents(data);
+
+      // 初期キーとストアチェック状態をセット
+      const initKeys: Record<string, string> = {};
+      const initChecked: Record<string, boolean> = {};
+      data.forEach((agent) => {
+        initKeys[agent._id] = agent.api_key ?? "";
+        initChecked[agent._id] = false;
+      });
+      setEditingKeys(initKeys);
+      setStoreChecked(initChecked);
     } catch (err: any) {
       setError("Failed to load agents: " + err.message);
       setAgents([]);
@@ -74,6 +90,69 @@ export default function AgentsPage() {
     } else {
       const err = await res.json();
       alert("Delete failed: " + (err.detail || res.statusText));
+    }
+  };
+
+  const saveApiKey = async (agentId: string) => {
+    const key = editingKeys[agentId] ?? "";
+    setSavingKey((s) => ({ ...s, [agentId]: true }));
+    try {
+      const res = await fetch(
+        `http://localhost:8000/agents/${agentId}/apikey`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ api_key: key }),
+        }
+      );
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      setAgents((prev) =>
+        prev.map((a) =>
+          a._id === agentId
+            ? {
+                ...a,
+                api_key: key,
+              }
+            : a
+        )
+      );
+      alert("APIキーを保存しました");
+    } catch (e: any) {
+      alert("APIキーの保存に失敗しました: " + e.message);
+    } finally {
+      setSavingKey((s) => ({ ...s, [agentId]: false }));
+    }
+  };
+
+  const publishToStore = async (agent: AgentCard) => {
+    const id = agent._id;
+    setPublishing((p) => ({ ...p, [id]: true }));
+    try {
+      // agent.endpoint から endpoi を構築
+      const body = {
+        name: agent.name,
+        description: agent.description || "",
+        tags: agent.tags || [],
+        endpoint: agent.endpoint,
+      };
+      const res = await fetch("http://localhost:8000/market/agents", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || res.statusText);
+      }
+      alert(`“${agent.name}” をストアに公開しました`);
+      // チェックをオフにしておく
+      setStoreChecked((c) => ({ ...c, [id]: false }));
+    } catch (e: any) {
+      alert("公開に失敗しました: " + e.message);
+    } finally {
+      setPublishing((p) => ({ ...p, [id]: false }));
     }
   };
 
@@ -99,6 +178,16 @@ export default function AgentsPage() {
                   <h3 className="text-2xl font-semibold mb-2">
                     {agent.name}
                   </h3>
+                  <h5 className="mb-2">
+                    Availability:&nbsp;
+                    {agent.is_active ? (
+                      <span className="text-green-600 font-semibold">OK</span>
+                    ) : (
+                      <span className="text-red-600 font-semibold">
+                        Error
+                      </span>
+                    )}
+                  </h5>
                   {agent.description && (
                     <p className="text-gray-700 mb-4">
                       {agent.description}
@@ -151,9 +240,7 @@ export default function AgentsPage() {
                       <div>
                         <span className="font-medium">Capabilities:</span>
                         <ul className="list-disc list-inside ml-4 mt-1">
-                          {agent.capabilities.streaming && (
-                            <li>Streaming</li>
-                          )}
+                          {agent.capabilities.streaming && <li>Streaming</li>}
                           {agent.capabilities.pushNotifications && (
                             <li>Push Notifications</li>
                           )}
@@ -182,9 +269,7 @@ export default function AgentsPage() {
                   {/* Skills Section */}
                   {agent.skills && agent.skills.length > 0 && (
                     <div className="mb-4">
-                      <h4 className="text-lg font-semibold mb-2">
-                        Skills
-                      </h4>
+                      <h4 className="text-lg font-semibold mb-2">Skills</h4>
                       <ul className="space-y-2 text-gray-700 text-sm">
                         {agent.skills.map((skill) => (
                           <li
@@ -223,6 +308,59 @@ export default function AgentsPage() {
                       </ul>
                     </div>
                   )}
+                </div>
+
+                {/* APIキー入力 */}
+                <div className="mb-4">
+                  <label className="block font-medium mb-1">
+                    Agent API Key
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      className="flex-1 border p-2 rounded"
+                      value={editingKeys[agent._id] ?? ""}
+                      onChange={(e) =>
+                        setEditingKeys((prev) => ({
+                          ...prev,
+                          [agent._id]: e.target.value,
+                        }))
+                      }
+                    />
+                    <button
+                      disabled={savingKey[agent._id]}
+                      onClick={() => saveApiKey(agent._id)}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                    >
+                      {savingKey[agent._id] ? "Saving…" : "Save"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Push to Store */}
+                <div className="mb-4">
+                  <label className="flex items-center space-x-2 mb-1">
+                    <input
+                      type="checkbox"
+                      checked={storeChecked[agent._id] || false}
+                      onChange={(e) =>
+                        setStoreChecked((prev) => ({
+                          ...prev,
+                          [agent._id]: e.target.checked,
+                        }))
+                      }
+                    />
+                    <span className="font-medium">Push to Store</span>
+                  </label>
+                  <button
+                    disabled={
+                      !storeChecked[agent._id] || publishing[agent._id]
+                    }
+                    onClick={() => publishToStore(agent)}
+                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                  >
+                    {publishing[agent._id] ? "Publishing…" : "Publish"}
+                  </button>
                 </div>
 
                 {/* Delete Button */}

@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Header from "@/components/Header";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 
 type Tool = {
   name: string;
@@ -18,8 +19,6 @@ type McpServer = {
   description?: string;
   url: string;
   type: "sse" | "local";
-  // Python 側で保存している list_tools.dict() 全体を `doc` に、
-  // その中の tools 配列を参照する形に合わせます
   doc?: {
     tools: Tool[];
     meta?: any;
@@ -32,10 +31,12 @@ export default function McpServerDetailPage() {
   const router = useRouter();
   const [server, setServer] = useState<McpServer | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+    useAuthRedirect();
 
   useEffect(() => {
     if (!id) return;
-    fetch(`/mcp/servers/detail/${id}`, {
+    fetch(`http://localhost:8000/mcp/servers/detail/${id}`, {
       credentials: "include",
     })
       .then(async (res) => {
@@ -52,6 +53,38 @@ export default function McpServerDetailPage() {
         setError("サーバー情報／ツール一覧の取得に失敗しました");
       });
   }, [id]);
+
+  // 公開ボタンハンドラ
+  const publishToMarket = async () => {
+    if (!server) return;
+    setPublishing(true);
+    try {
+      const body = {
+        name: server.name,
+        description: server.description ?? "",
+        url: server.url,
+        type: server.type,
+      };
+      const res = await fetch("http://localhost:8000/market/mcp", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const detail = (err.detail as string) || res.statusText;
+        alert(`公開に失敗しました: ${detail}`);
+        return;
+      }
+      alert("マーケットへの公開が完了しました。");
+    } catch (e) {
+      console.error(e);
+      alert("公開中にエラーが発生しました");
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   if (error) {
     return (
@@ -99,6 +132,17 @@ export default function McpServerDetailPage() {
         <p className="mb-4">
           <span className="font-medium">方式：</span> {server.type.toUpperCase()}
         </p>
+        <div className="mb-6">
+          <button
+            onClick={publishToMarket}
+            disabled={publishing}
+            className={`bg-green-500 text-white px-4 py-2 rounded transition-opacity ${
+              publishing ? "opacity-50 cursor-wait" : "hover:bg-green-600"
+            }`}
+          >
+            {publishing ? "公開中…" : "マーケットに公開する"}
+          </button>
+        </div>
 
         <section className="mb-6">
           <h3 className="text-xl font-semibold mb-2">
@@ -140,6 +184,8 @@ export default function McpServerDetailPage() {
             <p className="text-gray-500">— ツール情報がありません —</p>
           )}
         </section>
+
+        
 
         <button
           onClick={() => router.back()}

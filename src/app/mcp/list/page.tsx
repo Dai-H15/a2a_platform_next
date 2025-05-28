@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 
 type McpServer = {
   id: string;
@@ -11,6 +12,8 @@ type McpServer = {
 };
 
 export default function McpServerListPage() {
+  useAuthRedirect();
+
   const router = useRouter();
   const [servers, setServers] = useState<McpServer[]>([]);
   const [error, setError] = useState("");

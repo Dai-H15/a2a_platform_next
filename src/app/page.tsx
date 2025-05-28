@@ -1,3 +1,4 @@
+// src/app/page.tsx
 "use client";
 import Link from "next/link";
 import Header from "@/components/Header";
@@ -8,7 +9,7 @@ export default function Home() {
       <Header />
 
       <main className="p-6 max-w-5xl mx-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           <Link href="/agents">
             <div className="bg-blue-100 border border-blue-300 rounded-lg p-6 hover:shadow-md transition cursor-pointer">
               <h2 className="text-xl font-semibold mb-2">🧠 View Agents</h2>
@@ -50,6 +51,15 @@ export default function Home() {
               <h2 className="text-xl font-semibold mb-2">📋 List MCP Servers</h2>
               <p className="text-sm">
                 View or delete your registered MCP servers.
+              </p>
+            </div>
+          </Link>
+
+          <Link href="/market">
+            <div className="bg-teal-100 border border-teal-300 rounded-lg p-6 hover:shadow-md transition cursor-pointer">
+              <h2 className="text-xl font-semibold mb-2">🛒 Browse App Store</h2>
+              <p className="text-sm">
+                Explore community-published agents and tools in the marketplace.
               </p>
             </div>
           </Link>

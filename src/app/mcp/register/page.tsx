@@ -3,18 +3,21 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 
 export default function RegisterMcpServerPage() {
+    useAuthRedirect();
+  
   const router = useRouter();
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<"sse" | "local">("sse");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(false);
+    setError("");
 
     try {
       const res = await fetch("http://localhost:8000/mcp/servers/regist", {
@@ -26,14 +29,20 @@ export default function RegisterMcpServerPage() {
 
       if (!res.ok) {
         // サーバーからのレスポンスは全て「エラーが発生しました」で隠蔽
-        setError(true);
+        const data = await res.json();
+        if("detail" in data){
+          let detail = data.detail;
+          setError("エラーが発生しました:" + detail);
+        }else{
+          setError("エラーが発生しました:");
+        }
         return;
       }
 
       router.push("/mcp/list");
     } catch (e) {
       // ネットワークエラーなども「エラーが発生しました」に統一
-      setError(true);
+      setError("エラーが発生しました。");
     }
   };
 
@@ -46,7 +55,7 @@ export default function RegisterMcpServerPage() {
 
         {error && (
           <p className="text-red-600 mb-4">
-            登録に失敗しました。
+            {error}。
           </p>
         )}
 
