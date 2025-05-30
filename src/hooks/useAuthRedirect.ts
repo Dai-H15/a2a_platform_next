@@ -4,10 +4,11 @@ import { useRouter } from "next/navigation";
 
 export function useAuthRedirect() {
   const router = useRouter();
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
   useEffect(() => {
     const checkAuth = async () => {
-      const res = await fetch("http://localhost:8000/auth/me", {
+      const res = await fetch(`${BACKEND_URL}/auth/me`, {
         method: "GET",
         credentials: "include",
       });
@@ -16,5 +17,5 @@ export function useAuthRedirect() {
       }
     };
     checkAuth();
-  }, []);
+  }, [router, BACKEND_URL]);
 }

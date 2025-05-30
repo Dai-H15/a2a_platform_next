@@ -15,6 +15,8 @@ type AgentDetail = {
   is_active?: boolean;
 };
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
 export default function AgentMarketDetail() {
   useAuthRedirect();
   const { id } = useParams();
@@ -25,7 +27,7 @@ export default function AgentMarketDetail() {
   useEffect(() => {
     // idが無ければ何もしない
     if (!id) return;
-    fetch(`http://localhost:8000/market/agents/${id}`)
+    fetch(`${BACKEND_URL}/market/agents/${id}`)
       .then(async (res) => {
         if (!res.ok) throw new Error(`Status ${res.status}`);
         return res.json();
@@ -35,13 +37,13 @@ export default function AgentMarketDetail() {
         // エラー時のみ router.back を呼び出し
         router.back();
       });
-  }, [id]);  // ← router は外して id のみ
+  }, [id, router]);  // ← router を依存配列に追加
 
   const install = async () => {
     if (!agent) return;
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/register-agent-by-url", {
+      const res = await fetch(`${BACKEND_URL}/register-agent-by-url`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

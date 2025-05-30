@@ -11,6 +11,8 @@ type McpServer = {
   description?: string;
 };
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
 export default function McpServerListPage() {
   useAuthRedirect();
 
@@ -20,7 +22,7 @@ export default function McpServerListPage() {
 
   const fetchServers = async () => {
     try {
-      const res = await fetch("http://localhost:8000/mcp/servers", {
+      const res = await fetch(`${BACKEND_URL}/mcp/servers`, {
         credentials: "include",
       });
       if (!res.ok) throw new Error("取得失敗");
@@ -36,7 +38,7 @@ export default function McpServerListPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("本当に削除しますか？")) return;
-    const res = await fetch(`http://localhost:8000/mcp/servers/delete/${id}`, {
+    const res = await fetch(`${BACKEND_URL}/mcp/servers/delete/${id}`, {
       method: "DELETE",
       credentials: "include",
     });

@@ -26,6 +26,8 @@ type McpServer = {
   };
 };
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
 export default function McpServerDetailPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -36,7 +38,7 @@ export default function McpServerDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    fetch(`http://localhost:8000/mcp/servers/detail/${id}`, {
+    fetch(`${BACKEND_URL}/mcp/servers/detail/${id}`, {
       credentials: "include",
     })
       .then(async (res) => {
@@ -65,7 +67,7 @@ export default function McpServerDetailPage() {
         url: server.url,
         type: server.type,
       };
-      const res = await fetch("http://localhost:8000/market/mcp", {
+      const res = await fetch(`${BACKEND_URL}/market/mcp`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

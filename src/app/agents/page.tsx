@@ -35,6 +35,8 @@ type AgentCard = {
   is_active?: boolean;
 };
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
 export default function AgentsPage() {
   useAuthRedirect();
 
@@ -51,7 +53,7 @@ export default function AgentsPage() {
 
   const fetchAgents = async () => {
     try {
-      const res = await fetch("http://localhost:8000/agents", {
+      const res = await fetch(`${BACKEND_URL}/agents`, {
         credentials: "include",
       });
       if (res.status === 401) {
@@ -81,7 +83,7 @@ export default function AgentsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this agent?")) return;
-    const res = await fetch(`http://localhost:8000/agents/${id}`, {
+    const res = await fetch(`${BACKEND_URL}/agents/${id}`, {
       method: "DELETE",
       credentials: "include",
     });
@@ -98,7 +100,7 @@ export default function AgentsPage() {
     setSavingKey((s) => ({ ...s, [agentId]: true }));
     try {
       const res = await fetch(
-        `http://localhost:8000/agents/${agentId}/apikey`,
+        `${BACKEND_URL}/agents/${agentId}/apikey`,
         {
           method: "PATCH",
           credentials: "include",
@@ -136,7 +138,7 @@ export default function AgentsPage() {
         tags: agent.tags || [],
         endpoint: agent.endpoint,
       };
-      const res = await fetch("http://localhost:8000/market/agents", {
+      const res = await fetch(`${BACKEND_URL}/market/agents`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

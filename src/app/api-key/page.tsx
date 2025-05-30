@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
 export default function ApiKeyPage() {
   useAuthRedirect();
 
@@ -14,7 +16,7 @@ export default function ApiKeyPage() {
   // 初期表示でキーを取得 & ルーター URL をセット
   useEffect(() => {
     (async () => {
-      const res = await fetch("http://localhost:8000/auth/key", {
+      const res = await fetch(`${BACKEND_URL}/auth/key`, {
         credentials: "include",
       });
       if (res.ok) {
@@ -24,7 +26,7 @@ export default function ApiKeyPage() {
         setMessage("Failed to load API key.");
       }
       if (typeof window !== "undefined") {
-        setRouterEndpoint("localhost:8000/a2a");
+        setRouterEndpoint(`${BACKEND_URL}/a2a`);
       }
     })();
   }, []);
@@ -32,7 +34,7 @@ export default function ApiKeyPage() {
   // 再生成ハンドラ
   const regenerate = async () => {
     setMessage("Regenerating…");
-    const res = await fetch("http://localhost:8000/auth/regenerate-key", {
+    const res = await fetch(`${BACKEND_URL}/auth/regenerate-key`, {
       method: "POST",
       credentials: "include",
     });

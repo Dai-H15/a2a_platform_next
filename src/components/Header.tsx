@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
 export default function Header() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const router = useRouter();
@@ -10,7 +12,7 @@ export default function Header() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch("http://localhost:8000/auth/me", {
+        const res = await fetch(`${BACKEND_URL}/auth/me`, {
           method: "GET",
           credentials: "include", // ← セッションクッキー送信
         });
@@ -28,7 +30,7 @@ export default function Header() {
   }, []);
 
   const logout = async () => {
-    await fetch("http://localhost:8000/auth/logout", {
+    await fetch(`${BACKEND_URL}/auth/logout`, {
       method: "POST",
       credentials: "include",
     });

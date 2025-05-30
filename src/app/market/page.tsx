@@ -18,6 +18,8 @@ type McpServer = {
   description?: string;
 };
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
 export default function MarketAgentsPage() {
   
   const [agents, setAgents] = useState<AgentCard[]>([]);
@@ -29,8 +31,8 @@ export default function MarketAgentsPage() {
     async function fetchAll() {
       try {
         const [aRes, mRes] = await Promise.all([
-          fetch("http://localhost:8000/market/agents", { credentials: "include" }),
-          fetch("http://localhost:8000/market/mcp", { credentials: "include" }),
+          fetch(`${BACKEND_URL}/market/agents`, { credentials: "include" }),
+          fetch(`${BACKEND_URL}/market/mcp`, { credentials: "include" }),
         ]);
         if (!aRes.ok) throw new Error(`Agents fetch failed (${aRes.status})`);
         if (!mRes.ok) throw new Error(`MCP fetch failed (${mRes.status})`);

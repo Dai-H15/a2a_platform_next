@@ -22,8 +22,9 @@ export default function MarketMcpDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
     if (!id) return;
-    fetch(`http://localhost:8000/market/mcp/${id}`, {
+    fetch(`${BACKEND_URL}/market/mcp/${id}`, {
       credentials: "include",
     })
       .then(async (res) => {
@@ -38,12 +39,13 @@ export default function MarketMcpDetailPage() {
   }, [id, router]);
 
   const install = async () => {
+    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
     if (!server) return;
     setLoading(true);
     setError(null);
 
     try {
-      const res = await fetch("http://localhost:8000/mcp/servers/regist", {
+      const res = await fetch(`${BACKEND_URL}/mcp/servers/regist`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

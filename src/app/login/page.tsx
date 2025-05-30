@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -11,7 +13,7 @@ export default function LoginPage() {
 
   const handleLogin = async (e: any) => {
     e.preventDefault();
-    const res = await fetch("http://localhost:8000/auth/login", {
+    const res = await fetch(`${BACKEND_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include", // ← 重要：クッキーを送受信

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
 export default function RegisterByUrlPage() {
   useAuthRedirect();
   const [url, setUrl] = useState("");
@@ -13,7 +15,7 @@ export default function RegisterByUrlPage() {
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
-    const res = await fetch("http://localhost:8000/register-agent-by-url", {
+    const res = await fetch(`${BACKEND_URL}/register-agent-by-url`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },

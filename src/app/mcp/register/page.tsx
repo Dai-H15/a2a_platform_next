@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
 export default function RegisterMcpServerPage() {
     useAuthRedirect();
   
@@ -20,7 +22,7 @@ export default function RegisterMcpServerPage() {
     setError("");
 
     try {
-      const res = await fetch("http://localhost:8000/mcp/servers/regist", {
+      const res = await fetch(`${BACKEND_URL}/mcp/servers/regist`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -31,7 +33,7 @@ export default function RegisterMcpServerPage() {
         // サーバーからのレスポンスは全て「エラーが発生しました」で隠蔽
         const data = await res.json();
         if("detail" in data){
-          let detail = data.detail;
+          const detail = data.detail;
           setError("エラーが発生しました:" + detail);
         }else{
           setError("エラーが発生しました:");
@@ -40,7 +42,7 @@ export default function RegisterMcpServerPage() {
       }
 
       router.push("/mcp/list");
-    } catch (e) {
+    } catch {
       // ネットワークエラーなども「エラーが発生しました」に統一
       setError("エラーが発生しました。");
     }
