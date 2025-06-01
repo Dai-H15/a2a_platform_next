@@ -11,36 +11,38 @@ export default function RegisterUserPage() {
   const [RetypePassword, setRetypePassword] = useState("");
   const [secret_code, setSecretCode] = useState("");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
-    if (!email || !password || !secret_code || !RetypePassword) {
-      setMessage("Please fill in all fields.");
-      return;
-    }
-    if(password !== RetypePassword){
-      setMessage("Please input same Password.");
-      return;
-    }
-
-    const res = await fetch(`${BACKEND_URL}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, secret_code }),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      setMessage("User created. API Key: " + data.api_key);
-      const button = document.getElementById("submit_button");
-      if(button){
-        button.hidden = true;
+    if (loading) return; // 二重送信防止
+    setLoading(true);
+    setMessage("");
+    try {
+      if (!email || !password || !secret_code || !RetypePassword) {
+        setMessage("Please fill in all fields.");
+        return;
       }
-      setTimeout(() => router.push("/login"), 3000);
-    } else {
-      const err = await res.json();
-      setMessage("Registration failed: " + (err.detail || JSON.stringify(err)));
+      if(password !== RetypePassword){
+        setMessage("Please input same Password.");
+        return;
+      }
+      const res = await fetch(`${BACKEND_URL}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, secret_code }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMessage("User created. API Key: " + data.api_key);
+        setTimeout(() => router.push("/login"), 3000);
+      } else {
+        const err = await res.json();
+        setMessage("Registration failed: " + (err.detail || JSON.stringify(err)));
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -91,9 +93,18 @@ export default function RegisterUserPage() {
             <button
               type="submit"
               id="submit_button"
-              className="bg-green-600 text-white px-4 py-2 rounded w-full"
+              className={`bg-green-600 text-white px-4 py-2 rounded w-full ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={loading}
             >
-              Register
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                  </svg>
+                  Registering...
+                </span>
+              ) : 'Register'}
             </button>
           </form>
         </div>

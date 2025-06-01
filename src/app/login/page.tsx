@@ -9,23 +9,31 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleLogin = async (e: any) => {
     e.preventDefault();
-    const res = await fetch(`${BACKEND_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include", // ← 重要：クッキーを送受信
-      body: JSON.stringify({ email, password }),
-    });
+    if (loading) return; // 二重送信防止
+    setLoading(true);
+    setMessage("");
+    try {
+      const res = await fetch(`${BACKEND_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // ← 重要：クッキーを送受信
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (res.ok) {
-      setMessage("Login successful! Redirecting...");
-      setTimeout(() => router.push("/"), 1000);
-    } else {
-      const err = await res.json();
-      setMessage("Login failed: " + (err.detail || JSON.stringify(err)));
+      if (res.ok) {
+        setMessage("Login successful! Redirecting...");
+        setTimeout(() => router.push("/"), 1000);
+      } else {
+        const err = await res.json();
+        setMessage("Login failed: " + (err.detail || JSON.stringify(err)));
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -68,9 +76,18 @@ export default function LoginPage() {
             </div>
             <button
               type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded w-full"
+              className={`bg-blue-600 text-white px-4 py-2 rounded w-full ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={loading}
             >
-              Login
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                  </svg>
+                  Logging in...
+                </span>
+              ) : 'Login'}
             </button>
           </form>
         </div>
