@@ -11,7 +11,6 @@ type AgentDetail = {
   name: string;
   description: string;
   tags?: string[];
-  endpoint: string;
   is_active?: boolean;
 };
 
@@ -43,11 +42,10 @@ export default function AgentMarketDetail() {
     if (!agent) return;
     setLoading(true);
     try {
-      const res = await fetch(`${BACKEND_URL}/register-agent-by-url`, {
+      const res = await fetch(`${BACKEND_URL}/market/agents/install/${agent.id}`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: agent.endpoint }),
       });
 
       if (!res.ok) {
