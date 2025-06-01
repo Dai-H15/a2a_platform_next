@@ -9,7 +9,6 @@ type MarketMcpServer = {
   id: string;
   name: string;
   description?: string;
-  url: string;
   type: "sse" | "local";
   is_active?:boolean;
 };
@@ -45,16 +44,10 @@ export default function MarketMcpDetailPage() {
     setError(null);
 
     try {
-      const res = await fetch(`${BACKEND_URL}/mcp/servers/regist`, {
+      const res = await fetch(`${BACKEND_URL}/mcp/install/${server.id}`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: server.name,
-          description: server.description ?? "",
-          url: server.url,
-          type: server.type,
-        }),
       });
 
       if (!res.ok) {
@@ -104,10 +97,6 @@ export default function MarketMcpDetailPage() {
         {server.description && (
           <p className="mb-4 text-gray-700">{server.description}</p>
         )}
-        <p className="mb-2">
-          <span className="font-medium">URL:</span>{" "}
-          <code className="bg-gray-50 px-1 rounded">{server.url}</code>
-        </p>
         <p className="mb-6">
           <span className="font-medium">方式:</span> {server.type.toUpperCase()}
         </p>
