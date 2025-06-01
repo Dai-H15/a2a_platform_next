@@ -44,7 +44,7 @@ export default function MarketMcpDetailPage() {
     setError(null);
 
     try {
-      const res = await fetch(`${BACKEND_URL}/mcp/install/${server.id}`, {
+      const res = await fetch(`${BACKEND_URL}/market/mcp/install/${server.id}`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
