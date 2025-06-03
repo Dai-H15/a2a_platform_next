@@ -46,10 +46,39 @@ export default function AgentsPage() {
   const [savingKey, setSavingKey] = useState<Record<string, boolean>>({});
   const [storeChecked, setStoreChecked] = useState<Record<string, boolean>>({});
   const [publishing, setPublishing] = useState<Record<string, boolean>>({});
+  // Availabilityローディング状態
+  const [activeLoading, setActiveLoading] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchAgents();
   }, []);
+
+  // is_activeの問い合わせは別で行う
+  useEffect(() => {
+    if (agents.length === 0) return;
+    // ローディング状態を管理
+    setActiveLoading(() => {
+      const obj: Record<string, boolean> = {};
+      agents.forEach((a) => (obj[a._id] = true));
+      return obj;
+    });
+    agents.forEach(async (agent) => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/agents/availablity/${agent._id}`, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const result = await res.json();
+          setAgents((prev) =>
+            prev.map((a) =>
+              a._id === agent._id ? { ...a, is_active: result.is_active } : a
+            )
+          );
+        }
+      } catch {}
+      setActiveLoading((prev) => ({ ...prev, [agent._id]: false }));
+    });
+  }, [agents.length]);
 
   const fetchAgents = async () => {
     try {
@@ -182,12 +211,17 @@ export default function AgentsPage() {
                   </h3>
                   <h5 className="mb-2">
                     Availability:&nbsp;
-                    {agent.is_active ? (
+                    {activeLoading[agent._id] ? (
+                      <span className="inline-block align-middle">
+                        <svg className="animate-spin h-5 w-5 text-gray-500 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                        </svg>
+                      </span>
+                    ) : agent.is_active ? (
                       <span className="text-green-600 font-semibold">OK</span>
                     ) : (
-                      <span className="text-red-600 font-semibold">
-                        Error
-                      </span>
+                      <span className="text-red-600 font-semibold">Error</span>
                     )}
                   </h5>
                   {agent.description && (
