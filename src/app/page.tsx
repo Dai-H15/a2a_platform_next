@@ -63,6 +63,15 @@ export default function Home() {
               </p>
             </div>
           </Link>
+
+          <Link href="/logs">
+            <div className="bg-orange-100 border border-orange-300 rounded-lg p-6 hover:shadow-md transition cursor-pointer">
+              <h2 className="text-xl font-semibold mb-2">📜 View Logs</h2>
+              <p className="text-sm">
+                View your agent/user interaction logs.
+              </p>
+            </div>
+          </Link>
         </div>
       </main>
     </div>
