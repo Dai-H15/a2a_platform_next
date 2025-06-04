@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
+import { saveAs } from "file-saver";
 
 interface LogEntry {
   _id: string;
@@ -14,6 +15,12 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:800
 
 function prettyJson(obj: any) {
   return JSON.stringify(obj, null, 2);
+}
+
+function downloadLogs(logs: LogEntry[]) {
+  const blob = new Blob([JSON.stringify(logs, null, 2)], { type: "application/json" });
+  const filename = `A2A_Routing_Service_logs_${new Date().toISOString().slice(0, 10)}.json`;
+  saveAs(blob, filename);
 }
 
 export default function LogsPage() {
@@ -50,6 +57,15 @@ export default function LogsPage() {
       <Header />
       <main className="p-6 max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">📜 エージェントログ一覧</h1>
+        <div className="mb-4 flex justify-end">
+          <button
+            onClick={() => downloadLogs(logs)}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow text-sm font-semibold"
+            disabled={logs.length === 0}
+          >
+            ログをダウンロード
+          </button>
+        </div>
         {loading && <div className="text-gray-500">読み込み中...</div>}
         {error && <div className="text-red-500 mb-4">{error}</div>}
         {!loading && !error && (
