@@ -12,12 +12,16 @@ interface LogEntry {
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
+function prettyJson(obj: any) {
+  return JSON.stringify(obj, null, 2);
+}
 
 export default function LogsPage() {
   useAuthRedirect();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [openRows, setOpenRows] = useState<{ [id: string]: boolean }>({});
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -36,6 +40,10 @@ export default function LogsPage() {
     };
     fetchLogs();
   }, []);
+
+  const toggleRow = (id: string) => {
+    setOpenRows((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900">
@@ -60,13 +68,35 @@ export default function LogsPage() {
                     <td colSpan={3} className="text-center text-gray-400 py-6">ログがありません</td>
                   </tr>
                 ) : (
-                  logs.map((log) => (
-                    <tr key={log._id} className="hover:bg-gray-50">
-                      <td className="border px-3 py-2 whitespace-nowrap">{new Date(log.timestamp).toLocaleString()}</td>
-                      <td className="border px-3 py-2 whitespace-nowrap">{log.user_email}</td>
-                      <td className="border px-3 py-2 text-xs break-all font-mono bg-gray-50">{JSON.stringify(log, null, 2)}</td>
-                    </tr>
-                  ))
+                  logs.map((log) => {
+                    // 内容の要約（例: status, task, message など主要フィールドのみ表示）
+                    const summary = log.status?.message?.parts?.[0]?.text || log.status?.message || "...";
+                    return (
+                      <>
+                        <tr
+                          key={log._id}
+                          className={"hover:bg-gray-50 cursor-pointer"}
+                          onClick={() => toggleRow(log._id)}
+                        >
+                          <td className="border px-3 py-2 whitespace-nowrap">{new Date(log.timestamp).toLocaleString()}</td>
+                          <td className="border px-3 py-2 whitespace-nowrap">{log.user_email}</td>
+                          <td className="border px-3 py-2 text-xs break-all font-mono bg-gray-50">
+                            {summary.length > 100 ? summary.slice(0, 100) + "..." : summary}
+                            <span className="ml-2 text-blue-500">{openRows[log._id] ? "▲" : "▼"}</span>
+                          </td>
+                        </tr>
+                        {openRows[log._id] && (
+                          <tr>
+                            <td colSpan={3} className="bg-gray-100 border-t px-3 py-2">
+                              <pre className="whitespace-pre-wrap text-xs font-mono overflow-x-auto p-2 bg-gray-50 rounded border border-gray-200">
+                                {prettyJson(log)}
+                              </pre>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })
                 )}
               </tbody>
             </table>
