@@ -78,7 +78,7 @@ export default function AgentsPage() {
       } catch {}
       setActiveLoading((prev) => ({ ...prev, [agent._id]: false }));
     });
-  }, [agents.length]);
+  }, [agents]);
 
   const fetchAgents = async () => {
     try {
