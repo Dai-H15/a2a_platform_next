@@ -13,7 +13,7 @@ export default function ApiKeyPage() {
   const [message, setMessage] = useState<string>("");
   const [routerEndpoint, setRouterEndpoint] = useState<string>("");
 
-  // 初期表示でキーを取得 & ルーター URL をセット
+  // 初期表示でキーを取得
   useEffect(() => {
     (async () => {
       const res = await fetch(`${BACKEND_URL}/auth/key`, {
@@ -25,11 +25,17 @@ export default function ApiKeyPage() {
       } else {
         setMessage("Failed to load API key.");
       }
-      if (typeof window !== "undefined") {
-        setRouterEndpoint(`${BACKEND_URL}/a2a`);
-      }
     })();
   }, []);
+
+  // apiKeyが変化したらrouterEndpointを更新
+  useEffect(() => {
+    if (apiKey) {
+      setRouterEndpoint(`${BACKEND_URL}/a2a/auth/${apiKey}`);
+    } else {
+      setRouterEndpoint("");
+    }
+  }, [apiKey]);
 
   // 再生成ハンドラ
   const regenerate = async () => {
@@ -41,7 +47,7 @@ export default function ApiKeyPage() {
     if (res.ok) {
       const { api_key } = await res.json();
       setApiKey(api_key);
-      setMessage("API key regenerated.");
+      setMessage("Endpoint URL regenerated.");
     } else {
       setMessage("Failed to regenerate.");
     }
@@ -58,31 +64,13 @@ export default function ApiKeyPage() {
       <Header />
 
       <main className="p-8 max-w-lg mx-auto space-y-6">
-        <h2 className="text-3xl font-bold mb-2">🔑 Your API Key</h2>
+        <h2 className="text-3xl font-bold mb-2">🔑 Your Endpoint URL</h2>
 
         {message && (
           <p className="text-sm text-indigo-600">{message}</p>
         )}
 
-        {/* API Key Card */}
-        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Current Key
-          </label>
-          <div className="flex items-center space-x-2">
-            <code className="flex-1 bg-gray-100 px-3 py-2 rounded text-gray-800 break-all">
-              {apiKey || "—"}
-            </code>
-            {apiKey && (
-              <button
-                onClick={() => copyToClipboard(apiKey, "APIキー")}
-                className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded"
-              >
-                Copy
-              </button>
-            )}
-          </div>
-        </div>
+
 
         {/* Router Endpoint Card */}
         {routerEndpoint && (
@@ -109,7 +97,7 @@ export default function ApiKeyPage() {
           onClick={regenerate}
           className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded-lg transition-shadow shadow-sm hover:shadow-md"
         >
-          Regenerate API Key
+          Regenerate Endpoint URL
         </button>
       </main>
     </div>
