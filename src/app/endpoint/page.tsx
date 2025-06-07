@@ -64,7 +64,7 @@ export default function ApiKeyPage() {
       <Header />
 
       <main className="p-8 max-w-lg mx-auto space-y-6">
-        <h2 className="text-3xl font-bold mb-2">🔑 Your Endpoint URL</h2>
+        <h2 className="text-3xl font-bold mb-2">🔗 Your Endpoint URL</h2>
 
         {message && (
           <p className="text-sm text-indigo-600">{message}</p>

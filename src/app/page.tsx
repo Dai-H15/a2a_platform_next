@@ -30,9 +30,9 @@ export default function Home() {
 
           <Link href="/endpoint">
             <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-6 hover:shadow-md transition cursor-pointer">
-              <h2 className="text-xl font-semibold mb-2">🔑 Manage API Key</h2>
+              <h2 className="text-xl font-semibold mb-2">🔗 Manage Endpoint URL</h2>
               <p className="text-sm">
-                View or regenerate your personal API key.
+                View or regenerate your personal Endpoint URL.
               </p>
             </div>
           </Link>
