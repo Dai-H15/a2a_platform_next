@@ -53,33 +53,7 @@ export default function AgentsPage() {
     fetchAgents();
   }, []);
 
-  // is_activeの問い合わせは別で行う
-  useEffect(() => {
-    if (agents.length === 0) return;
-    // ローディング状態を管理
-    setActiveLoading(() => {
-      const obj: Record<string, boolean> = {};
-      agents.forEach((a) => (obj[a._id] = true));
-      return obj;
-    });
-    agents.forEach(async (agent) => {
-      try {
-        const res = await fetch(`${BACKEND_URL}/agents/availablity/${agent._id}`, {
-          credentials: "include",
-        });
-        if (res.ok) {
-          const result = await res.json();
-          setAgents((prev) =>
-            prev.map((a) =>
-              a._id === agent._id ? { ...a, is_active: result.is_active } : a
-            )
-          );
-        }
-      } catch {}
-      setActiveLoading((prev) => ({ ...prev, [agent._id]: false }));
-    });
-  }, [agents]);
-
+  // is_activeの問い合わせはfetchAgents内で一度だけ行う
   const fetchAgents = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/agents`, {
@@ -94,6 +68,30 @@ export default function AgentsPage() {
         throw new Error("Response is not an array");
       }
       setAgents(data);
+
+      // is_activeの問い合わせをここで一度だけ行う
+      const obj: Record<string, boolean> = {};
+      data.forEach((a) => (obj[a._id] = true));
+      setActiveLoading(obj);
+
+      await Promise.all(
+        data.map(async (agent) => {
+          try {
+            const res = await fetch(`${BACKEND_URL}/agents/availablity/${agent._id}`, {
+              credentials: "include",
+            });
+            if (res.ok) {
+              const result = await res.json();
+              setAgents((prev) =>
+                prev.map((a) =>
+                  a._id === agent._id ? { ...a, is_active: result.is_active } : a
+                )
+              );
+            }
+          } catch {}
+          setActiveLoading((prev) => ({ ...prev, [agent._id]: false }));
+        })
+      );
 
       // 初期キーとストアチェック状態をセット
       const initKeys: Record<string, string> = {};
