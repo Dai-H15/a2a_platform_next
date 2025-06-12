@@ -33,7 +33,7 @@ export function useGetUserRole(login_required = false) {
       }
     };
     fetchUser();
-  }, []);
+  }, [BACKEND_URL, login_required, router]);
 
   return { userRole, loading };
 }

@@ -11,12 +11,9 @@ interface User {
 }
 
 export default function AdminPage() {
-  const router = useRouter();
   const { userRole, loading } = useGetUserRole(true);
   const [users, setUsers] = useState<User[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [checkedUserEmails, setCheckedUserEmails] = useState<string[]>([]);
   const [toasts, setToasts] = useState<{ id: number; message: string; type: "success" | "error" }[]>([]);
@@ -33,9 +30,9 @@ export default function AdminPage() {
       fetch(`${BACKEND_URL}/users`, { credentials: "include" })
         .then(res => res.json())
         .then(setUsers)
-        .catch(() => setError("ユーザー一覧の取得に失敗しました"));
+        .catch(() => showToast("ユーザー一覧の取得に失敗しました", "error"));
     }
-  }, [userRole]);
+  }, [userRole, BACKEND_URL]);
 
   // ユーザー自身のメールアドレス取得
   useEffect(() => {
@@ -45,7 +42,7 @@ export default function AdminPage() {
         .then(data => setCurrentUserEmail(data.email))
         .catch(() => setCurrentUserEmail(null));
     }
-  }, [userRole]);
+  }, [userRole, BACKEND_URL]);
 
   // トースト追加
   const showToast = (message: string, type: "success" | "error") => {

@@ -48,7 +48,7 @@ export default function Header() {
       <div className="text-sm flex items-center gap-4">
         {userEmail ? (
           <>
-            <span className="text-gray-600">Signed in as {userEmail} {userRole !== "user" && ( <span> ({userRole}) </span> )}</span> 
+            <span className="text-gray-600">Signed in as {userEmail} {(userRole !== "user" && !loading) && ( <span> ({userRole}) </span> )}</span> 
             <button onClick={logout} className="text-red-500 hover:underline">
               Logout
             </button>
