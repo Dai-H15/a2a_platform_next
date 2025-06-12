@@ -5,8 +5,7 @@ import Header from "@/components/Header";
 import { useGetUserRole } from "@/hooks/useGetUserRole";
 
 export default function Home() {
-  const { userRole, loading } = useGetUserRole();
-  if (loading) return null;
+  const { userRole } = useGetUserRole();
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900">
