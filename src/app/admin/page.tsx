@@ -248,66 +248,68 @@ export default function AdminPage() {
         )}
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-2">ユーザー管理</h2>
-          <table className="min-w-full text-sm bg-white rounded shadow border">
-            <thead className="bg-gray-50">
-              {userRole === "admin" ? (
-              <tr>
-                <th className="border px-3 py-2 text-center">選択</th>
-                <th className="border px-3 py-2">メールアドレス</th>
-                <th className="border px-3 py-2">ロール</th>
-                <th className="border px-3 py-2">操作</th>
-              </tr>
-              ): (
-              <tr>
-                <th className="border px-3 py-2 text-center">選択</th>
-                <th className="border px-3 py-2">メールアドレス</th>
-              </tr>
-              )}
-              
-            </thead>
-            <tbody>
-              {users.map(user => (
-                <tr key={user.email}>
-                  <td className="border px-3 py-2 text-center">
-                    <input
-                      type="checkbox"
-                      checked={checkedUserEmails.includes(user.email)}
-                      onChange={() => handleCheckboxChange(user.email)}
-                    />
-                  </td>
-                  <td className="border px-3 py-2">{user.email}</td>
-                  {userRole === "admin" && (
-                    <td className="border px-3 py-2">
-                      {user.email !== currentUserEmail ? (
-                        <select
-                          value={user.role}
-                          onChange={e => changeRole(user.email, e.target.value)}
-                          className="border rounded px-2 py-1"
-                        >
-                          <option value="user">user</option>
-                          <option value="admin">admin</option>
-                          <option value="management">management</option>
-                          <option value="maintainer">maintainer</option>
-                        </select>
-                      ) : (
-                        <span className="ml-2 text-xs text-gray-400">(自身のアカウントは操作不可)</span>
-                      )}
-                    </td>
-                  )}
-                  {userRole === "admin" && (
-                    <td className="border px-3 py-2">
-                      {user.email !== currentUserEmail ? (
-                        <button
-                          onClick={() => deleteUser(user.email)}
-                          className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded text-s"
-                        >削除</button>
-                      ):(<span className="ml-2 text-xs text-gray-400">(自身のアカウントは操作不可)</span>)}
-                    </td>
-                  )}
+          <div className="overflow-x-auto bg-white rounded-xl shadow border border-gray-200">
+            <table className="min-w-full text-sm">
+              <thead className="bg-gray-50">
+                {userRole === "admin" ? (
+                <tr>
+                  <th className="border px-3 py-2 text-center">選択</th>
+                  <th className="border px-3 py-2">メールアドレス</th>
+                  <th className="border px-3 py-2">ロール</th>
+                  <th className="border px-3 py-2">操作</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+                ): (
+                <tr>
+                  <th className="border px-3 py-2 text-center">選択</th>
+                  <th className="border px-3 py-2">メールアドレス</th>
+                </tr>
+                )}
+                
+              </thead>
+              <tbody>
+                {users.map(user => (
+                  <tr key={user.email}>
+                    <td className="border px-3 py-2 text-center">
+                      <input
+                        type="checkbox"
+                        checked={checkedUserEmails.includes(user.email)}
+                        onChange={() => handleCheckboxChange(user.email)}
+                      />
+                    </td>
+                    <td className="border px-3 py-2">{user.email}</td>
+                    {userRole === "admin" && (
+                      <td className="border px-3 py-2">
+                        {user.email !== currentUserEmail ? (
+                          <select
+                            value={user.role}
+                            onChange={e => changeRole(user.email, e.target.value)}
+                            className="border rounded px-2 py-1"
+                          >
+                            <option value="user">user</option>
+                            <option value="admin">admin</option>
+                            <option value="management">management</option>
+                            <option value="maintainer">maintainer</option>
+                          </select>
+                        ) : (
+                          <span className="ml-2 text-xs text-gray-400">(自身のアカウントは操作不可)</span>
+                        )}
+                      </td>
+                    )}
+                    {userRole === "admin" && (
+                      <td className="border px-3 py-2">
+                        {user.email !== currentUserEmail ? (
+                          <button
+                            onClick={() => deleteUser(user.email)}
+                            className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded text-s"
+                          >削除</button>
+                        ):(<span className="ml-2 text-xs text-gray-400">(自身のアカウントは操作不可)</span>)}
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
         {/* ログ管理セクションはadmin/management両方で表示 */}
         <section>
