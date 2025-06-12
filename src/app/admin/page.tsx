@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { useGetUserRole } from "@/hooks/useGetUserRole";
 import Header from "@/components/Header";
 import { useCheckUserRole } from "@/hooks/useCheckUserRole";
@@ -97,7 +96,7 @@ export default function AdminPage() {
       body: JSON.stringify({ user_emails: checkedUserEmails }),
     });
     if (res.ok){
-      let data = res = await res.json();
+      const data = res = await res.json();
     if (data){
       setLogs(data);
       showToast("ログを取得しました", "success");
