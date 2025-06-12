@@ -4,11 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
+import { useCheckUserRole } from "@/hooks/useCheckUserRole";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 export default function RegisterByUrlPage() {
   useAuthRedirect();
+  useCheckUserRole(["admin", "maintainer"]);
   const [url, setUrl] = useState("");
   const [message, setMessage] = useState("");
   const router = useRouter();

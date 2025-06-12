@@ -4,12 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
+import { useCheckUserRole } from "@/hooks/useCheckUserRole";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 export default function RegisterMcpServerPage() {
     useAuthRedirect();
-  
+    useCheckUserRole(["admin", "maintainer"]);
   const router = useRouter();
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");

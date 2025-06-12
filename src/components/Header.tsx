@@ -2,11 +2,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useGetUserRole } from "@/hooks/useGetUserRole";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 export default function Header() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const { userRole, loading } = useGetUserRole();
   const router = useRouter();
 
   useEffect(() => {
@@ -46,7 +48,7 @@ export default function Header() {
       <div className="text-sm flex items-center gap-4">
         {userEmail ? (
           <>
-            <span className="text-gray-600">Signed in as {userEmail}</span>
+            <span className="text-gray-600">Signed in as {userEmail} {userRole !== "user" && ( <span> ({userRole}) </span> )}</span> 
             <button onClick={logout} className="text-red-500 hover:underline">
               Logout
             </button>
