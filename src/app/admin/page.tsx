@@ -10,7 +10,7 @@ interface User {
 }
 
 export default function AdminPage() {
-  const { userRole } = useGetUserRole(true);
+  const { userRole, loading } = useGetUserRole(true);
   const [users, setUsers] = useState<User[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
@@ -162,6 +162,11 @@ export default function AdminPage() {
       prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
     );
   };
+  if(loading){
+    return(<div className="min-h-screen bg-gray-100 text-gray-900">
+      <Header />
+      </div>)
+    }
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900">
