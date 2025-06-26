@@ -9,14 +9,44 @@ interface User {
   role: string;
 }
 
+interface PlatformLog {
+  _id?: string;
+  email: string;
+  event_name: string;
+  summary?: string;
+  timestamp: string;
+  error: boolean;
+  content?: any;
+}
+
 export default function AdminPage() {
   const { userRole, loading } = useGetUserRole(true);
   const [users, setUsers] = useState<User[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
+  const [platformLogs, setPlatformLogs] = useState<PlatformLog[]>([]);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [checkedUserEmails, setCheckedUserEmails] = useState<string[]>([]);
+  const [logsfetchedUserCount, setLogsFetchedUserCount] = useState<number>(0);
+  const [platformLogsfetchedUserCount, setPlatformLogsFetchedUserCount] = useState<number>(0);
   const [toasts, setToasts] = useState<{ id: number; message: string; type: "success" | "error" }[]>([]);
   const [openDetails, setOpenDetails] = useState<number[]>([]);
+  const [openPlatformDetails, setOpenPlatformDetails] = useState<number[]>([]);
+  
+  // フィルタリング用のstate
+  const [logFilters, setLogFilters] = useState({
+    startDate: "",
+    endDate: "",
+    userEmail: "",
+    searchText: ""
+  });
+  const [platformLogFilters, setPlatformLogFilters] = useState({
+    startDate: "",
+    endDate: "",
+    userEmail: "",
+    operation: "",
+    errorOnly: false
+  });
+  
   const toastId = useRef(0);
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
@@ -89,27 +119,63 @@ export default function AdminPage() {
       showToast("ユーザーを選択してください", "error");
       return;
     }
-    let res = await fetch(`${BACKEND_URL}/admin/logs`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_emails: checkedUserEmails }),
-    });
-    if (res.ok){
-      const data = res = await res.json();
-    if (data){
-      setLogs(data);
-      showToast("ログを取得しました", "success");
-    }
-    }else{
-      let detail = (await res.json()).detail
-      if(!detail){
-        detail = ""
+    try {
+      const res = await fetch(`${BACKEND_URL}/admin/logs`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_emails: checkedUserEmails }),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        const userCount = checkedUserEmails.length;
+        setLogs(data);
+        setLogsFetchedUserCount(userCount);
+        showToast(`${userCount}人のユーザーのログを取得しました`, "success");
+      } else {
+        const errorData = await res.json();
+        const detail = errorData.detail || "ログ取得に失敗しました";
+        showToast(detail, "error");
+        setLogs([]);
       }
-      showToast(`ログの取得に失敗しました${detail}`, "error")
+    } catch (error) {
+      showToast("ログ取得中にエラーが発生しました", "error");
       setLogs([]);
     }
-    
+  };
+
+  // プラットフォーム操作ログ取得（常に復号化済みデータを受信）
+  const fetchPlatformLogs = async () => {
+    if (checkedUserEmails.length === 0) {
+      showToast("ユーザーを選択してください", "error");
+      return;
+    }
+    try {
+      const res = await fetch(`${BACKEND_URL}/admin/platform-logs`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          user_emails: checkedUserEmails
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPlatformLogs(data);
+        const userCount = checkedUserEmails.length;
+        setPlatformLogsFetchedUserCount(userCount);
+        showToast(`${checkedUserEmails.length}人のユーザーの操作ログを取得しました`, "success");
+      } else {
+        const errorData = await res.json();
+        const detail = errorData.detail || "操作ログ取得に失敗しました";
+        showToast(detail, "error");
+        setPlatformLogs([]);
+      }
+    } catch (error) {
+      showToast("操作ログの取得に失敗しました", "error");
+      setPlatformLogs([]);
+    }
   };
 
   // ログダウンロード
@@ -147,6 +213,27 @@ export default function AdminPage() {
     a.click();
   }
 
+  // プラットフォームログをCSVでダウンロード
+  function downloadPlatformLogsCsv(logs: PlatformLog[]) {
+    if (!logs.length) return;
+    const headers = ["timestamp", "email", "event_name", "summary", "error", "content"];
+    const rows = logs.map((log) => [
+      new Date(log.timestamp).toLocaleString(),
+      log.email,
+      log.event_name,
+      log.summary || "",
+      log.error ? "Yes" : "No",
+      log.content ? JSON.stringify(log.content).replace(/"/g, '""') : ""
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const filename = `A2A_Platform_Logs_${new Date().toISOString().slice(0, 10)}.csv`;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+  }
+
   // チェックボックスの切り替え
   const handleCheckboxChange = (email: string) => {
     setCheckedUserEmails(prev =>
@@ -162,6 +249,81 @@ export default function AdminPage() {
       prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
     );
   };
+
+  // プラットフォームログ詳細トグル
+  const togglePlatformDetail = (idx: number) => {
+    setOpenPlatformDetails((prev) =>
+      prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+    );
+  };
+
+  // 会話ログフィルタリング
+  const filteredLogs = logs.filter(log => {
+    const logDate = new Date(log.timestamp);
+    const startDate = logFilters.startDate ? new Date(logFilters.startDate) : null;
+    const endDate = logFilters.endDate ? new Date(logFilters.endDate + 'T23:59:59') : null;
+    
+    // 日時フィルタ
+    if (startDate && logDate < startDate) return false;
+    if (endDate && logDate > endDate) return false;
+    
+    // ユーザーフィルタ
+    if (logFilters.userEmail && !log.user_email.toLowerCase().includes(logFilters.userEmail.toLowerCase())) return false;
+    
+    // テキスト検索フィルタ
+    if (logFilters.searchText) {
+      const userInput = log.history?.find((h: any) => h.role === "user")?.parts?.[0]?.text || "";
+      const agentResponse = log.status?.message?.parts?.[0]?.text || log.status?.message || "";
+      const searchLower = logFilters.searchText.toLowerCase();
+      if (!userInput.toLowerCase().includes(searchLower) && 
+          !agentResponse.toLowerCase().includes(searchLower)) return false;
+    }
+    
+    return true;
+  });
+
+  // プラットフォームログフィルタリング
+  const filteredPlatformLogs = platformLogs.filter(log => {
+    const logDate = new Date(log.timestamp);
+    const startDate = platformLogFilters.startDate ? new Date(platformLogFilters.startDate) : null;
+    const endDate = platformLogFilters.endDate ? new Date(platformLogFilters.endDate + 'T23:59:59') : null;
+    
+    // 日時フィルタ
+    if (startDate && logDate < startDate) return false;
+    if (endDate && logDate > endDate) return false;
+    
+    // ユーザーフィルタ
+    if (platformLogFilters.userEmail && !log.email.toLowerCase().includes(platformLogFilters.userEmail.toLowerCase())) return false;
+    
+    // 操作フィルタ
+    if (platformLogFilters.operation && !log.event_name.toLowerCase().includes(platformLogFilters.operation.toLowerCase())) return false;
+    
+    // エラーのみフィルタ
+    if (platformLogFilters.errorOnly && !log.error) return false;
+    
+    return true;
+  });
+
+  // フィルタクリア
+  const clearLogFilters = () => {
+    setLogFilters({
+      startDate: "",
+      endDate: "",
+      userEmail: "",
+      searchText: ""
+    });
+  };
+
+  const clearPlatformLogFilters = () => {
+    setPlatformLogFilters({
+      startDate: "",
+      endDate: "",
+      userEmail: "",
+      operation: "",
+      errorOnly: false
+    });
+  };
+
   if(loading){
     return(<div className="min-h-screen bg-gray-100 text-gray-900">
       <Header />
@@ -251,6 +413,22 @@ export default function AdminPage() {
         )}
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-2">ユーザー管理</h2>
+          {(userRole === "admin" || userRole === "management") && (
+            <div className="mb-3 flex gap-2">
+              <button
+                onClick={() => setCheckedUserEmails(users.map(u => u.email))}
+                className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded shadow text-xs"
+              >
+                全選択
+              </button>
+              <button
+                onClick={() => setCheckedUserEmails([])}
+                className="bg-gray-400 hover:bg-gray-500 text-white px-3 py-1 rounded shadow text-xs"
+              >
+                選択解除
+              </button>
+            </div>
+          )}
           <div className="overflow-x-auto bg-white rounded-xl shadow border border-gray-200">
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50">
@@ -313,24 +491,104 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
+          <div className="my-3 p-3 bg-gray-50 rounded-lg border">
+            <p className="text-sm text-gray-600 mb-2">
+              選択中のユーザー: {checkedUserEmails.length}人
+              {checkedUserEmails.length > 0 && (
+                <span className="ml-2 text-xs">({checkedUserEmails.join(", ")})</span>
+              )}
+            </p>
+          </div>
         </section>
         {/* ログ管理セクションはadmin/management両方で表示 */}
-        <section>
-          <h2 className="text-xl font-semibold mb-2">ログ管理</h2>
-          <button
-            onClick={fetchLogs}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2"
-          >ログ取得</button>
-          <button
-            onClick={downloadLogs}
-            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 ml-2"
-            disabled={logs.length === 0}
-          >ログをダウンロード</button>
-          <button
-            onClick={() => downloadLogsCsv(logs)}
-            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 ml-2"
-            disabled={logs.length === 0}
-          >CSVでダウンロード</button>
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold mb-2">会話ログ管理</h2>
+          <div className="mb-4">
+            <button
+              onClick={fetchLogs}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2"
+              disabled={checkedUserEmails.length === 0}
+            >ログ取得</button>
+            <button
+              onClick={downloadLogs}
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 ml-2"
+              disabled={logs.length === 0}
+            >ログをダウンロード</button>
+            <button
+              onClick={() => downloadLogsCsv(filteredLogs)}
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 ml-2"
+              disabled={filteredLogs.length === 0}
+            >CSVでダウンロード（フィルタ適用）</button>
+          </div>
+          
+          {/* フィルタUI */}
+          {logs.length > 0 && (
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg border">
+              <h3 className="text-sm font-semibold mb-3 text-gray-700">フィルタ</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">開始日</label>
+                  <input
+                    type="date"
+                    value={logFilters.startDate}
+                    onChange={(e) => setLogFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">終了日</label>
+                  <input
+                    type="date"
+                    value={logFilters.endDate}
+                    onChange={(e) => setLogFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">ユーザー</label>
+                  <input
+                    type="text"
+                    placeholder="メールアドレスを入力"
+                    value={logFilters.userEmail}
+                    onChange={(e) => setLogFilters(prev => ({ ...prev, userEmail: e.target.value }))}
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">テキスト検索</label>
+                  <input
+                    type="text"
+                    placeholder="入力・応答内容を検索"
+                    value={logFilters.searchText}
+                    onChange={(e) => setLogFilters(prev => ({ ...prev, searchText: e.target.value }))}
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={clearLogFilters}
+                  className="bg-gray-400 hover:bg-gray-500 text-white px-3 py-1 rounded text-xs"
+                >
+                  フィルタクリア
+                </button>
+                <span className="text-xs text-gray-600 flex items-center">
+                  表示件数: {filteredLogs.length} / {logs.length}
+                </span>
+              </div>
+            </div>
+          )}
+          
+          {logs.length > 0 && (
+            <div className="mt-2 mb-2 p-2 bg-blue-50 rounded border">
+              <p className="text-sm text-blue-700">
+                {logsfetchedUserCount}人のユーザーから{logs.length}件のログを取得しました
+                {filteredLogs.length !== logs.length && (
+                  <span className="ml-2 text-blue-600">（フィルタ適用後: {filteredLogs.length}件）</span>
+                )}
+              </p>
+            </div>
+          )}
           <div className="overflow-x-auto bg-white rounded-xl shadow border border-gray-200 mt-2">
             <table className="min-w-full text-sm table-fixed">
               <thead className="bg-gray-50">
@@ -343,19 +601,22 @@ export default function AdminPage() {
               </thead>
               <tbody>
                 
-                {(logs.length === 0) ? (
+                {(filteredLogs.length === 0) ? (
                   <tr>
-                    <td colSpan={4} className="text-center text-gray-400 py-6">ログがありません</td>
+                    <td colSpan={4} className="text-center text-gray-400 py-6">
+                      {logs.length === 0 ? "ログがありません" : "フィルタ条件に一致するログがありません"}
+                    </td>
                   </tr>
                 ) : (
-                  logs.map((log, idx) => {
+                  filteredLogs.map((log, idx) => {
                     const userInput = log.history?.find((h: any) => h.role === "user")?.parts?.[0]?.text || "";
                     const agentResponse = log.status?.message?.parts?.[0]?.text || log.status?.message || "";
+                    const originalIdx = logs.findIndex(l => l._id === log._id || l.timestamp === log.timestamp);
                     return (
                       <React.Fragment key={log._id || idx}>
                         <tr
-                          className={`hover:bg-gray-50 cursor-pointer ${openDetails.includes(idx) ? "bg-blue-50" : ""}`}
-                          onClick={() => toggleDetail(idx)}
+                          className={`hover:bg-gray-50 cursor-pointer ${openDetails.includes(originalIdx) ? "bg-blue-50" : ""}`}
+                          onClick={() => toggleDetail(originalIdx)}
                         >
                           <td className="border px-3 py-2 whitespace-nowrap">{new Date(log.timestamp).toLocaleString()}</td>
                           <td className="border px-3 py-2 whitespace-nowrap">{log.user_email}</td>
@@ -366,12 +627,181 @@ export default function AdminPage() {
                             {agentResponse.length > 100 ? agentResponse.slice(0, 100) + "..." : agentResponse}
                           </td>
                         </tr>
-                        {openDetails.includes(idx) && (
+                        {openDetails.includes(originalIdx) && (
                           <tr>
                             <td colSpan={4} className="bg-gray-100 border-t px-3 py-2">
                               <pre className="whitespace-pre-wrap text-xs font-mono overflow-x-auto p-2 bg-gray-50 rounded border border-gray-200">
                                 {JSON.stringify(log, null, 2)}
                               </pre>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* 操作ログ管理セクション（admin/management両方で表示） */}
+        <section>
+          <h2 className="text-xl font-semibold mb-2">操作ログ管理</h2>
+          <div className="mb-4">
+            <button
+              onClick={() => fetchPlatformLogs()}
+              className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2"
+              disabled={checkedUserEmails.length === 0}
+            >操作ログ取得</button>
+            <button
+              onClick={() => downloadPlatformLogsCsv(filteredPlatformLogs)}
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 ml-2"
+              disabled={filteredPlatformLogs.length === 0}
+            >CSVでダウンロード（フィルタ適用）</button>
+          </div>
+          
+          {/* フィルタUI */}
+          {platformLogs.length > 0 && (
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg border">
+              <h3 className="text-sm font-semibold mb-3 text-gray-700">フィルタ</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">開始日</label>
+                  <input
+                    type="date"
+                    value={platformLogFilters.startDate}
+                    onChange={(e) => setPlatformLogFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">終了日</label>
+                  <input
+                    type="date"
+                    value={platformLogFilters.endDate}
+                    onChange={(e) => setPlatformLogFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">ユーザー</label>
+                  <input
+                    type="text"
+                    placeholder="メールアドレスを入力"
+                    value={platformLogFilters.userEmail}
+                    onChange={(e) => setPlatformLogFilters(prev => ({ ...prev, userEmail: e.target.value }))}
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">操作</label>
+                  <input
+                    type="text"
+                    placeholder="操作名を入力"
+                    value={platformLogFilters.operation}
+                    onChange={(e) => setPlatformLogFilters(prev => ({ ...prev, operation: e.target.value }))}
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">ステータス</label>
+                  <label className="flex items-center text-xs">
+                    <input
+                      type="checkbox"
+                      checked={platformLogFilters.errorOnly}
+                      onChange={(e) => setPlatformLogFilters(prev => ({ ...prev, errorOnly: e.target.checked }))}
+                      className="mr-1"
+                    />
+                    エラーのみ
+                  </label>
+                </div>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={clearPlatformLogFilters}
+                  className="bg-gray-400 hover:bg-gray-500 text-white px-3 py-1 rounded text-xs"
+                >
+                  フィルタクリア
+                </button>
+                <span className="text-xs text-gray-600 flex items-center">
+                  表示件数: {filteredPlatformLogs.length} / {platformLogs.length}
+                </span>
+              </div>
+            </div>
+          )}
+          
+          {platformLogs.length > 0 && (
+            <div className="mt-2 mb-2 p-2 bg-blue-50 rounded border">
+              <p className="text-sm text-blue-700">
+                {platformLogsfetchedUserCount}人のユーザーから{platformLogs.length}件のログを取得しました
+                {filteredPlatformLogs.length !== platformLogs.length && (
+                  <span className="ml-2 text-blue-600">（フィルタ適用後: {filteredPlatformLogs.length}件）</span>
+                )}
+              </p>
+            </div>
+          )}
+          <div className="overflow-x-auto bg-white rounded-xl shadow border border-gray-200 mt-2">
+            <table className="min-w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="border px-3 py-2 text-left">日時</th>
+                  <th className="border px-3 py-2 text-left">ユーザー</th>
+                  <th className="border px-3 py-2 text-left">操作</th>
+                  <th className="border px-3 py-2 text-left">概要</th>
+                  <th className="border px-3 py-2 text-left">ステータス</th>
+                  <th className="border px-3 py-2 text-left">詳細</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPlatformLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center text-gray-400 py-6">
+                      {platformLogs.length === 0 ? "操作ログがありません" : "フィルタ条件に一致する操作ログがありません"}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredPlatformLogs.map((log, idx) => {
+                    const originalIdx = platformLogs.findIndex(l => l._id === log._id || l.timestamp === log.timestamp);
+                    return (
+                      <React.Fragment key={log._id || idx}>
+                        <tr 
+                          className={`hover:bg-gray-50 ${log.content ? 'cursor-pointer' : ''} ${openPlatformDetails.includes(originalIdx) ? "bg-blue-50" : ""}`}
+                          onClick={() => log.content && togglePlatformDetail(originalIdx)}
+                        >
+                          <td className="border px-3 py-2 whitespace-nowrap">
+                            {new Date(log.timestamp).toLocaleString()}
+                          </td>
+                          <td className="border px-3 py-2">{log.email}</td>
+                          <td className="border px-3 py-2">{log.event_name}</td>
+                          <td className="border px-3 py-2">
+                            {log.summary || <span className="text-gray-400 text-xs">概要なし</span>}
+                          </td>
+                          <td className="border px-3 py-2">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              log.error 
+                                ? "bg-red-100 text-red-800" 
+                                : "bg-green-100 text-green-800"
+                            }`}>
+                              {log.error ? "エラー" : "成功"}
+                            </span>
+                          </td>
+                          <td className="border px-3 py-2">
+                            {log.content ? (
+                              <span className="text-blue-600 text-xs">クリックで詳細表示</span>
+                            ) : (
+                              <span className="text-gray-400 text-xs">詳細なし</span>
+                            )}
+                          </td>
+                        </tr>
+                        {openPlatformDetails.includes(originalIdx) && log.content && (
+                          <tr>
+                            <td colSpan={5} className="bg-gray-100 border-t px-3 py-2">
+                              <div className="max-h-64 overflow-y-auto">
+                                <pre className="whitespace-pre-wrap text-xs font-mono p-2 bg-gray-50 rounded border border-gray-200">
+                                  {JSON.stringify(log.content, null, 2)}
+                                </pre>
+                              </div>
                             </td>
                           </tr>
                         )}
