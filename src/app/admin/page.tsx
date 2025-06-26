@@ -796,7 +796,7 @@ export default function AdminPage() {
                         </tr>
                         {openPlatformDetails.includes(originalIdx) && log.content && (
                           <tr>
-                            <td colSpan={5} className="bg-gray-100 border-t px-3 py-2">
+                            <td colSpan={6} className="bg-gray-100 border-t px-3 py-2">
                               <div className="max-h-64 overflow-y-auto">
                                 <pre className="whitespace-pre-wrap text-xs font-mono p-2 bg-gray-50 rounded border border-gray-200">
                                   {JSON.stringify(log.content, null, 2)}
