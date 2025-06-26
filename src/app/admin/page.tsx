@@ -139,7 +139,7 @@ export default function AdminPage() {
         showToast(detail, "error");
         setLogs([]);
       }
-    } catch (error) {
+    } catch {
       showToast("ログ取得中にエラーが発生しました", "error");
       setLogs([]);
     }
@@ -172,7 +172,7 @@ export default function AdminPage() {
         showToast(detail, "error");
         setPlatformLogs([]);
       }
-    } catch (error) {
+    } catch {
       showToast("操作ログの取得に失敗しました", "error");
       setPlatformLogs([]);
     }
