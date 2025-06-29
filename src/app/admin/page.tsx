@@ -120,11 +120,21 @@ export default function AdminPage() {
       return;
     }
     try {
+      const requestBody: any = { user_emails: checkedUserEmails };
+      
+      // 期間指定がある場合は追加
+      if (logFilters.startDate) {
+        requestBody.start_date = new Date(logFilters.startDate).toISOString();
+      }
+      if (logFilters.endDate) {
+        requestBody.end_date = new Date(logFilters.endDate).toISOString();
+      }
+      
       const res = await fetch(`${BACKEND_URL}/admin/logs`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_emails: checkedUserEmails }),
+        body: JSON.stringify(requestBody),
       });
       
       if (res.ok) {
@@ -132,7 +142,9 @@ export default function AdminPage() {
         const userCount = checkedUserEmails.length;
         setLogs(data);
         setLogsFetchedUserCount(userCount);
-        showToast(`${userCount}人のユーザーのログを取得しました`, "success");
+        const periodText = logFilters.startDate || logFilters.endDate ? 
+          ` (期間指定あり)` : "";
+        showToast(`${userCount}人のユーザーのログを取得しました${periodText}`, "success");
       } else {
         const errorData = await res.json();
         const detail = errorData.detail || "ログ取得に失敗しました";
@@ -152,20 +164,30 @@ export default function AdminPage() {
       return;
     }
     try {
+      const requestBody: any = { user_emails: checkedUserEmails };
+      
+      // 期間指定がある場合は追加
+      if (platformLogFilters.startDate) {
+        requestBody.start_date = new Date(platformLogFilters.startDate).toISOString();
+      }
+      if (platformLogFilters.endDate) {
+        requestBody.end_date = new Date(platformLogFilters.endDate).toISOString();
+      }
+      
       const res = await fetch(`${BACKEND_URL}/admin/platform-logs`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          user_emails: checkedUserEmails
-        }),
+        body: JSON.stringify(requestBody),
       });
       if (res.ok) {
         const data = await res.json();
         setPlatformLogs(data);
         const userCount = checkedUserEmails.length;
         setPlatformLogsFetchedUserCount(userCount);
-        showToast(`${checkedUserEmails.length}人のユーザーの操作ログを取得しました`, "success");
+        const periodText = platformLogFilters.startDate || platformLogFilters.endDate ? 
+          ` (期間指定あり)` : "";
+        showToast(`${checkedUserEmails.length}人のユーザーの操作ログを取得しました${periodText}`, "success");
       } else {
         const errorData = await res.json();
         const detail = errorData.detail || "操作ログ取得に失敗しました";
@@ -521,6 +543,41 @@ export default function AdminPage() {
             >CSVでダウンロード（フィルタ適用）</button>
           </div>
           
+          {/* 期間指定でのログ取得 */}
+          <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <h3 className="text-sm font-semibold mb-2 text-blue-700">期間指定ログ取得</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">開始日時</label>
+                <input
+                  type="date"
+                  value={logFilters.startDate}
+                  onChange={(e) => setLogFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">終了日時</label>
+                <input
+                  type="date"
+                  value={logFilters.endDate}
+                  onChange={(e) => setLogFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <button
+                  onClick={fetchLogs}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded text-sm font-semibold"
+                  disabled={checkedUserEmails.length === 0}
+                >
+                  期間指定で取得
+                </button>
+                <p className="text-xs text-gray-500 mt-1">期間指定時はlimit制限なし</p>
+              </div>
+            </div>
+          </div>
+          
           {/* フィルタUI */}
           {logs.length > 0 && (
             <div className="mb-4 p-4 bg-gray-50 rounded-lg border">
@@ -659,6 +716,41 @@ export default function AdminPage() {
               className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 ml-2"
               disabled={filteredPlatformLogs.length === 0}
             >CSVでダウンロード（フィルタ適用）</button>
+          </div>
+          
+          {/* 期間指定での操作ログ取得 */}
+          <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+            <h3 className="text-sm font-semibold mb-2 text-purple-700">期間指定操作ログ取得</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">開始日時</label>
+                <input
+                  type="date"
+                  value={platformLogFilters.startDate}
+                  onChange={(e) => setPlatformLogFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">終了日時</label>
+                <input
+                  type="date"
+                  value={platformLogFilters.endDate}
+                  onChange={(e) => setPlatformLogFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+                />
+              </div>
+              <div>
+                <button
+                  onClick={() => fetchPlatformLogs()}
+                  className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-1 rounded text-sm font-semibold"
+                  disabled={checkedUserEmails.length === 0}
+                >
+                  期間指定で取得
+                </button>
+                <p className="text-xs text-gray-500 mt-1">期間指定時はlimit制限なし</p>
+              </div>
+            </div>
           </div>
           
           {/* フィルタUI */}
