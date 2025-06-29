@@ -32,6 +32,16 @@ export default function AdminPage() {
   const [openDetails, setOpenDetails] = useState<number[]>([]);
   const [openPlatformDetails, setOpenPlatformDetails] = useState<number[]>([]);
   
+  // ローディング状態管理
+  const [loadingStates, setLoadingStates] = useState({
+    fetchingLogs: false,
+    fetchingPlatformLogs: false,
+    deletingUser: false,
+    updatingRole: false,
+    downloadingLogs: false,
+    downloadingPlatformLogs: false
+  });
+  
   // フィルタリング用のstate
   const [logFilters, setLogFilters] = useState({
     startDate: "",
@@ -82,34 +92,57 @@ export default function AdminPage() {
     }, 3000);
   };
 
+  // スピナーコンポーネント
+  const Spinner = () => (
+    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+  );
+
   // ユーザー削除
   const deleteUser = async (email: string) => {
     if (!confirm("本当に削除しますか？")) return;
-    const res = await fetch(`${BACKEND_URL}/users/${email}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-    if (res.ok) {
-      setUsers(users.filter(u => u.email !== email));
-      showToast("ユーザーを削除しました", "success");
-    } else {
-      showToast("削除に失敗しました", "error");
+    
+    setLoadingStates(prev => ({ ...prev, deletingUser: true }));
+    try {
+      const res = await fetch(`${BACKEND_URL}/users/${email}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        setUsers(users.filter(u => u.email !== email));
+        showToast("ユーザーを削除しました", "success");
+      } else {
+        showToast("削除に失敗しました", "error");
+      }
+    } catch (error) {
+      showToast("削除処理中にエラーが発生しました", "error");
+    } finally {
+      setLoadingStates(prev => ({ ...prev, deletingUser: false }));
     }
   };
 
   // ロール変更
   const changeRole = async (email: string, newRole: string) => {
-    const res = await fetch(`${BACKEND_URL}/users/role`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ email, role: newRole }),
-    });
-    if (res.ok) {
-      setUsers(users.map(u => u.email === email ? { ...u, role: newRole } : u));
-      showToast("ロールを変更しました", "success");
-    } else {
-      showToast("ロール変更に失敗しました", "error");
+    setLoadingStates(prev => ({ ...prev, updatingRole: true }));
+    try {
+      const res = await fetch(`${BACKEND_URL}/users/role`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, role: newRole }),
+      });
+      if (res.ok) {
+        setUsers(users.map(u => u.email === email ? { ...u, role: newRole } : u));
+        showToast("ロールを変更しました", "success");
+      } else {
+        showToast("ロール変更に失敗しました", "error");
+      }
+    } catch (error) {
+      showToast("ロール変更処理中にエラーが発生しました", "error");
+    } finally {
+      setLoadingStates(prev => ({ ...prev, updatingRole: false }));
     }
   };
 
@@ -119,6 +152,8 @@ export default function AdminPage() {
       showToast("ユーザーを選択してください", "error");
       return;
     }
+    
+    setLoadingStates(prev => ({ ...prev, fetchingLogs: true }));
     try {
       const requestBody: any = { user_emails: checkedUserEmails };
       
@@ -154,6 +189,8 @@ export default function AdminPage() {
     } catch {
       showToast("ログ取得中にエラーが発生しました", "error");
       setLogs([]);
+    } finally {
+      setLoadingStates(prev => ({ ...prev, fetchingLogs: false }));
     }
   };
 
@@ -163,6 +200,8 @@ export default function AdminPage() {
       showToast("ユーザーを選択してください", "error");
       return;
     }
+    
+    setLoadingStates(prev => ({ ...prev, fetchingPlatformLogs: true }));
     try {
       const requestBody: any = { user_emails: checkedUserEmails };
       
@@ -197,63 +236,97 @@ export default function AdminPage() {
     } catch {
       showToast("操作ログの取得に失敗しました", "error");
       setPlatformLogs([]);
+    } finally {
+      setLoadingStates(prev => ({ ...prev, fetchingPlatformLogs: false }));
     }
   };
 
   // ログダウンロード
   const downloadLogs = () => {
-    const blob = new Blob([JSON.stringify(logs, null, 2)], { type: "application/json" });
-    const filename = `A2A_Admin_Logs_${new Date().toISOString().slice(0, 10)}.json`;
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    a.click();
+    setLoadingStates(prev => ({ ...prev, downloadingLogs: true }));
+    try {
+      const blob = new Blob([JSON.stringify(logs, null, 2)], { type: "application/json" });
+      const filename = `A2A_Admin_Logs_${new Date().toISOString().slice(0, 10)}.json`;
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      showToast("ログのダウンロードを開始しました", "success");
+    } catch (error) {
+      showToast("ダウンロードに失敗しました", "error");
+    } finally {
+      setTimeout(() => {
+        setLoadingStates(prev => ({ ...prev, downloadingLogs: false }));
+      }, 1000); // 1秒後にローディングを解除
+    }
   };
 
   // ログをCSVでダウンロード
   function downloadLogsCsv(logs: any[]) {
     if (!logs.length) return;
-    const headers = ["timestamp", "user_email", "user_input", "agent_response", "raw_json"];
-    const rows = logs.map((log) => {
-      const userInput = log.history?.find((h: any) => h.role === "user")?.parts?.[0]?.text || "";
-      const agentResponse = log.status?.message?.parts?.[0]?.text || log.status?.message || "";
-      const rawJson = '"' + JSON.stringify(log).replace(/"/g, '""') + '"';
-      return [
-        new Date(log.timestamp).toLocaleString(),
-        log.user_email,
-        JSON.stringify(userInput),
-        JSON.stringify(agentResponse),
-        rawJson
-      ];
-    });
-    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const filename = `A2A_Admin_Logs_${new Date().toISOString().slice(0, 10)}.csv`;
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    a.click();
+    
+    setLoadingStates(prev => ({ ...prev, downloadingLogs: true }));
+    try {
+      const headers = ["timestamp", "user_email", "user_input", "agent_response", "raw_json"];
+      const rows = logs.map((log) => {
+        const userInput = log.history?.find((h: any) => h.role === "user")?.parts?.[0]?.text || "";
+        const agentResponse = log.status?.message?.parts?.[0]?.text || log.status?.message || "";
+        const rawJson = '"' + JSON.stringify(log).replace(/"/g, '""') + '"';
+        return [
+          new Date(log.timestamp).toLocaleString(),
+          log.user_email,
+          JSON.stringify(userInput),
+          JSON.stringify(agentResponse),
+          rawJson
+        ];
+      });
+      const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const filename = `A2A_Admin_Logs_${new Date().toISOString().slice(0, 10)}.csv`;
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      showToast("CSVダウンロードを開始しました", "success");
+    } catch (error) {
+      showToast("CSVダウンロードに失敗しました", "error");
+    } finally {
+      setTimeout(() => {
+        setLoadingStates(prev => ({ ...prev, downloadingLogs: false }));
+      }, 1000);
+    }
   }
 
   // プラットフォームログをCSVでダウンロード
   function downloadPlatformLogsCsv(logs: PlatformLog[]) {
     if (!logs.length) return;
-    const headers = ["timestamp", "email", "event_name", "summary", "error", "content"];
-    const rows = logs.map((log) => [
-      new Date(log.timestamp).toLocaleString(),
-      log.email,
-      log.event_name,
-      log.summary || "",
-      log.error ? "Yes" : "No",
-      log.content ? JSON.stringify(log.content).replace(/"/g, '""') : ""
-    ]);
-    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const filename = `A2A_Platform_Logs_${new Date().toISOString().slice(0, 10)}.csv`;
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    a.click();
+    
+    setLoadingStates(prev => ({ ...prev, downloadingPlatformLogs: true }));
+    try {
+      const headers = ["timestamp", "email", "event_name", "summary", "error", "content"];
+      const rows = logs.map((log) => [
+        new Date(log.timestamp).toLocaleString(),
+        log.email,
+        log.event_name,
+        log.summary || "",
+        log.error ? "Yes" : "No",
+        log.content ? JSON.stringify(log.content).replace(/"/g, '""') : ""
+      ]);
+      const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const filename = `A2A_Platform_Logs_${new Date().toISOString().slice(0, 10)}.csv`;
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      showToast("プラットフォームログのCSVダウンロードを開始しました", "success");
+    } catch (error) {
+      showToast("プラットフォームログCSVダウンロードに失敗しました", "error");
+    } finally {
+      setTimeout(() => {
+        setLoadingStates(prev => ({ ...prev, downloadingPlatformLogs: false }));
+      }, 1000);
+    }
   }
 
   // チェックボックスの切り替え
@@ -486,7 +559,8 @@ export default function AdminPage() {
                           <select
                             value={user.role}
                             onChange={e => changeRole(user.email, e.target.value)}
-                            className="border rounded px-2 py-1"
+                            className="border rounded px-2 py-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={loadingStates.updatingRole}
                           >
                             <option value="user">user</option>
                             <option value="admin">admin</option>
@@ -503,8 +577,12 @@ export default function AdminPage() {
                         {user.email !== currentUserEmail ? (
                           <button
                             onClick={() => deleteUser(user.email)}
-                            className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded text-s"
-                          >削除</button>
+                            className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded text-s disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={loadingStates.deletingUser}
+                          >
+                            {loadingStates.deletingUser && <Spinner />}
+                            削除
+                          </button>
                         ):(<span className="ml-2 text-xs text-gray-400">(自身のアカウントは操作不可)</span>)}
                       </td>
                     )}
@@ -528,19 +606,28 @@ export default function AdminPage() {
           <div className="mb-4">
             <button
               onClick={fetchLogs}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2"
-              disabled={checkedUserEmails.length === 0}
-            >ログ取得</button>
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={checkedUserEmails.length === 0 || loadingStates.fetchingLogs}
+            >
+              {loadingStates.fetchingLogs && <Spinner />}
+              ログ取得
+            </button>
             <button
               onClick={downloadLogs}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 ml-2"
-              disabled={logs.length === 0}
-            >ログをダウンロード</button>
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={logs.length === 0 || loadingStates.downloadingLogs}
+            >
+              {loadingStates.downloadingLogs && <Spinner />}
+              ログをダウンロード
+            </button>
             <button
               onClick={() => downloadLogsCsv(filteredLogs)}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 ml-2"
-              disabled={filteredLogs.length === 0}
-            >CSVでダウンロード（フィルタ適用）</button>
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={filteredLogs.length === 0 || loadingStates.downloadingLogs}
+            >
+              {loadingStates.downloadingLogs && <Spinner />}
+              CSVでダウンロード（フィルタ適用）
+            </button>
           </div>
           
           {/* 期間指定でのログ取得 */}
@@ -568,9 +655,10 @@ export default function AdminPage() {
               <div>
                 <button
                   onClick={fetchLogs}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded text-sm font-semibold"
-                  disabled={checkedUserEmails.length === 0}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={checkedUserEmails.length === 0 || loadingStates.fetchingLogs}
                 >
+                  {loadingStates.fetchingLogs && <Spinner />}
                   期間指定で取得
                 </button>
                 <p className="text-xs text-gray-500 mt-1">期間指定時はlimit制限なし</p>
@@ -708,14 +796,20 @@ export default function AdminPage() {
           <div className="mb-4">
             <button
               onClick={() => fetchPlatformLogs()}
-              className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2"
-              disabled={checkedUserEmails.length === 0}
-            >操作ログ取得</button>
+              className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={checkedUserEmails.length === 0 || loadingStates.fetchingPlatformLogs}
+            >
+              {loadingStates.fetchingPlatformLogs && <Spinner />}
+              操作ログ取得
+            </button>
             <button
               onClick={() => downloadPlatformLogsCsv(filteredPlatformLogs)}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 ml-2"
-              disabled={filteredPlatformLogs.length === 0}
-            >CSVでダウンロード（フィルタ適用）</button>
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={filteredPlatformLogs.length === 0 || loadingStates.downloadingPlatformLogs}
+            >
+              {loadingStates.downloadingPlatformLogs && <Spinner />}
+              CSVでダウンロード（フィルタ適用）
+            </button>
           </div>
           
           {/* 期間指定での操作ログ取得 */}
@@ -743,9 +837,10 @@ export default function AdminPage() {
               <div>
                 <button
                   onClick={() => fetchPlatformLogs()}
-                  className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-1 rounded text-sm font-semibold"
-                  disabled={checkedUserEmails.length === 0}
+                  className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-1 rounded text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={checkedUserEmails.length === 0 || loadingStates.fetchingPlatformLogs}
                 >
+                  {loadingStates.fetchingPlatformLogs && <Spinner />}
                   期間指定で取得
                 </button>
                 <p className="text-xs text-gray-500 mt-1">期間指定時はlimit制限なし</p>
