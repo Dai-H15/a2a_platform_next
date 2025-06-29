@@ -116,7 +116,7 @@ export default function AdminPage() {
       } else {
         showToast("削除に失敗しました", "error");
       }
-    } catch (error) {
+    } catch {
       showToast("削除処理中にエラーが発生しました", "error");
     } finally {
       setLoadingStates(prev => ({ ...prev, deletingUser: false }));
@@ -139,7 +139,7 @@ export default function AdminPage() {
       } else {
         showToast("ロール変更に失敗しました", "error");
       }
-    } catch (error) {
+    } catch {
       showToast("ロール変更処理中にエラーが発生しました", "error");
     } finally {
       setLoadingStates(prev => ({ ...prev, updatingRole: false }));
@@ -252,7 +252,7 @@ export default function AdminPage() {
       a.download = filename;
       a.click();
       showToast("ログのダウンロードを開始しました", "success");
-    } catch (error) {
+    } catch {
       showToast("ダウンロードに失敗しました", "error");
     } finally {
       setTimeout(() => {
@@ -288,7 +288,7 @@ export default function AdminPage() {
       a.download = filename;
       a.click();
       showToast("CSVダウンロードを開始しました", "success");
-    } catch (error) {
+    } catch {
       showToast("CSVダウンロードに失敗しました", "error");
     } finally {
       setTimeout(() => {
@@ -320,7 +320,7 @@ export default function AdminPage() {
       a.download = filename;
       a.click();
       showToast("プラットフォームログのCSVダウンロードを開始しました", "success");
-    } catch (error) {
+    } catch {
       showToast("プラットフォームログCSVダウンロードに失敗しました", "error");
     } finally {
       setTimeout(() => {
