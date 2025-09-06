@@ -68,7 +68,14 @@ export default function AdminPage() {
     if (userRole === "admin" || userRole == "management") {
       fetch(`${BACKEND_URL}/users`, { credentials: "include" })
         .then(res => res.json())
-        .then(setUsers)
+        .then(data => {
+          // 非認証ユーザーを追加
+          const usersWithAnonymous = [
+            ...data,
+            { email: "anonymous@a2a-routing.com", role: "非認証ユーザー" }
+          ];
+          setUsers(usersWithAnonymous);
+        })
         .catch(() => showToast("ユーザー一覧の取得に失敗しました", "error"));
     }
   }, [userRole, BACKEND_URL]);
@@ -552,10 +559,18 @@ export default function AdminPage() {
                         onChange={() => handleCheckboxChange(user.email)}
                       />
                     </td>
-                    <td className="border px-3 py-2">{user.email}</td>
+                    <td className="border px-3 py-2">
+                      {user.email === "anonymous@a2a-routing.com" ? (
+                        <span className="text-gray-600">
+                          非認証ユーザー
+                        </span>
+                      ) : (
+                        user.email
+                      )}
+                    </td>
                     {userRole === "admin" && (
                       <td className="border px-3 py-2">
-                        {user.email !== currentUserEmail ? (
+                        {user.email !== currentUserEmail && user.email !== "anonymous@a2a-routing.com" ? (
                           <select
                             value={user.role}
                             onChange={e => changeRole(user.email, e.target.value)}
@@ -567,6 +582,8 @@ export default function AdminPage() {
                             <option value="management">management</option>
                             <option value="maintainer">maintainer</option>
                           </select>
+                        ) : user.email === "anonymous@a2a-routing.com" ? (
+                          <span className="ml-2 text-xs text-gray-400">(変更不可)</span>
                         ) : (
                           <span className="ml-2 text-xs text-gray-400">(自身のアカウントは操作不可)</span>
                         )}
@@ -574,7 +591,7 @@ export default function AdminPage() {
                     )}
                     {userRole === "admin" && (
                       <td className="border px-3 py-2">
-                        {user.email !== currentUserEmail ? (
+                        {user.email !== currentUserEmail && user.email !== "anonymous@a2a-routing.com" ? (
                           <button
                             onClick={() => deleteUser(user.email)}
                             className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded text-s disabled:opacity-50 disabled:cursor-not-allowed"
@@ -583,7 +600,11 @@ export default function AdminPage() {
                             {loadingStates.deletingUser && <Spinner />}
                             削除
                           </button>
-                        ):(<span className="ml-2 text-xs text-gray-400">(自身のアカウントは操作不可)</span>)}
+                        ) : user.email === "anonymous@a2a-routing.com" ? (
+                          <span className="ml-2 text-xs text-gray-400">(削除不可)</span>
+                        ) : (
+                          <span className="ml-2 text-xs text-gray-400">(自身のアカウントは操作不可)</span>
+                        )}
                       </td>
                     )}
                   </tr>
@@ -595,7 +616,16 @@ export default function AdminPage() {
             <p className="text-sm text-gray-600 mb-2">
               選択中のユーザー: {checkedUserEmails.length}人
               {checkedUserEmails.length > 0 && (
-                <span className="ml-2 text-xs">({checkedUserEmails.join(", ")})</span>
+                <span className="ml-2 text-xs">
+                  ({checkedUserEmails
+                    .filter(email => email !== "anonymous@a2a-routing.com")
+                    .map(email => email === "anonymous@a2a-routing.com" ? "非認証ユーザー" : email)
+                    .join(", ")}
+                  {checkedUserEmails.includes("anonymous@a2a-routing.com") && 
+                   checkedUserEmails.filter(email => email !== "anonymous@a2a-routing.com").length > 0 && 
+                   ", "}
+                  {checkedUserEmails.includes("anonymous@a2a-routing.com") && "非認証ユーザー"})
+                </span>
               )}
             </p>
           </div>
@@ -764,7 +794,9 @@ export default function AdminPage() {
                           onClick={() => toggleDetail(originalIdx)}
                         >
                           <td className="border px-3 py-2 whitespace-nowrap">{new Date(log.timestamp).toLocaleString()}</td>
-                          <td className="border px-3 py-2 whitespace-nowrap">{log.user_email}</td>
+                          <td className="border px-3 py-2 whitespace-nowrap">
+                            {log.user_email === "anonymous@a2a-routing.com" ? "非認証ユーザー" : log.user_email}
+                          </td>
                           <td className="border px-3 py-2 text-xs break-all font-mono bg-gray-50">
                             {userInput.length > 100 ? userInput.slice(0, 100) + "..." : userInput}
                           </td>
@@ -959,7 +991,9 @@ export default function AdminPage() {
                           <td className="border px-3 py-2 whitespace-nowrap">
                             {new Date(log.timestamp).toLocaleString()}
                           </td>
-                          <td className="border px-3 py-2">{log.email}</td>
+                          <td className="border px-3 py-2">
+                            {log.email === "anonymous@a2a-routing.com" ? "非認証ユーザー" : log.email}
+                          </td>
                           <td className="border px-3 py-2">{log.event_name}</td>
                           <td className="border px-3 py-2">
                             {log.summary || <span className="text-gray-400 text-xs">概要なし</span>}
