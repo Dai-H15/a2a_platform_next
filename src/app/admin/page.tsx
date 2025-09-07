@@ -248,24 +248,175 @@ export default function AdminPage() {
     }
   };
 
-  // ログダウンロード
-  const downloadLogs = () => {
+  // ログダウンロード（JSON）- フロントエンドで生成
+  const downloadLogsJson = () => {
     setLoadingStates(prev => ({ ...prev, downloadingLogs: true }));
     try {
-      const blob = new Blob([JSON.stringify(logs, null, 2)], { type: "application/json" });
-      const filename = `A2A_Admin_Logs_${new Date().toISOString().slice(0, 10)}.json`;
+      const exportData = {
+        export_info: {
+          exported_by: currentUserEmail,
+          exported_by_role: userRole,
+          target_users: checkedUserEmails,
+          export_timestamp: new Date().toISOString(),
+          start_date: logFilters.startDate || null,
+          end_date: logFilters.endDate || null,
+          total_logs: logs.length,
+          log_type: "conversation_logs"
+        },
+        logs: logs
+      };
+      
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+      const usersStr = checkedUserEmails.length <= 3 ? checkedUserEmails.join("_") : `${checkedUserEmails.length}users`;
+      const filename = `admin_logs_${usersStr}_${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.json`;
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = filename;
       a.click();
-      showToast("ログのダウンロードを開始しました", "success");
+      showToast("ログのJSONダウンロードを開始しました", "success");
     } catch {
-      showToast("ダウンロードに失敗しました", "error");
+      showToast("JSONダウンロードに失敗しました", "error");
     } finally {
       setTimeout(() => {
         setLoadingStates(prev => ({ ...prev, downloadingLogs: false }));
-      }, 1000); // 1秒後にローディングを解除
+      }, 1000);
     }
+  };
+
+  // ログダウンロード（サーバー生成JSON）
+  const downloadLogsFromServer = async () => {
+    if (checkedUserEmails.length === 0) {
+      showToast("ユーザーを選択してください", "error");
+      return;
+    }
+
+    setLoadingStates(prev => ({ ...prev, downloadingLogs: true }));
+    try {
+      const body = {
+        user_emails: checkedUserEmails,
+        start_date: logFilters.startDate || undefined,
+        end_date: logFilters.endDate || undefined
+      };
+
+      const response = await fetch(`${BACKEND_URL}/admin/logs/download`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+
+      // ファイル名をContent-Dispositionヘッダーから取得
+      const contentDisposition = response.headers.get("Content-Disposition");
+      const filenameMatch = contentDisposition?.match(/filename=(.+)/);
+      const filename = filenameMatch ? filenameMatch[1] : `admin_logs_${new Date().toISOString().slice(0, 10)}.json`;
+
+      const blob = await response.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      
+      showToast("サーバー生成JSONダウンロードを開始しました", "success");
+    } catch (error) {
+      console.error("Download error:", error);
+      showToast("サーバー生成JSONダウンロードに失敗しました", "error");
+    } finally {
+      setTimeout(() => {
+        setLoadingStates(prev => ({ ...prev, downloadingLogs: false }));
+      }, 1000);
+    }
+  };
+
+  // プラットフォームログダウンロード（JSON）- フロントエンドで生成
+  const downloadPlatformLogsJson = () => {
+    setLoadingStates(prev => ({ ...prev, downloadingPlatformLogs: true }));
+    try {
+      const exportData = {
+        export_info: {
+          exported_by: currentUserEmail,
+          exported_by_role: userRole,
+          target_users: checkedUserEmails,
+          export_timestamp: new Date().toISOString(),
+          start_date: platformLogFilters.startDate || null,
+          end_date: platformLogFilters.endDate || null,
+          total_logs: platformLogs.length,
+          log_type: "platform_logs"
+        },
+        logs: platformLogs
+      };
+      
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+      const usersStr = checkedUserEmails.length <= 3 ? checkedUserEmails.join("_") : `${checkedUserEmails.length}users`;
+      const filename = `platform_logs_${usersStr}_${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.json`;
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      showToast("プラットフォームログのJSONダウンロードを開始しました", "success");
+    } catch {
+      showToast("プラットフォームログJSONダウンロードに失敗しました", "error");
+    } finally {
+      setTimeout(() => {
+        setLoadingStates(prev => ({ ...prev, downloadingPlatformLogs: false }));
+      }, 1000);
+    }
+  };
+
+  // プラットフォームログダウンロード（サーバー生成JSON）
+  const downloadPlatformLogsFromServer = async () => {
+    if (checkedUserEmails.length === 0) {
+      showToast("ユーザーを選択してください", "error");
+      return;
+    }
+
+    setLoadingStates(prev => ({ ...prev, downloadingPlatformLogs: true }));
+    try {
+      const body = {
+        user_emails: checkedUserEmails,
+        start_date: platformLogFilters.startDate || undefined,
+        end_date: platformLogFilters.endDate || undefined
+      };
+
+      const response = await fetch(`${BACKEND_URL}/admin/platform-logs/download`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+
+      // ファイル名をContent-Dispositionヘッダーから取得
+      const contentDisposition = response.headers.get("Content-Disposition");
+      const filenameMatch = contentDisposition?.match(/filename=(.+)/);
+      const filename = filenameMatch ? filenameMatch[1] : `platform_logs_${new Date().toISOString().slice(0, 10)}.json`;
+
+      const blob = await response.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      
+      showToast("プラットフォームログサーバー生成JSONダウンロードを開始しました", "success");
+    } catch (error) {
+      console.error("Platform logs download error:", error);
+      showToast("プラットフォームログサーバー生成JSONダウンロードに失敗しました", "error");
+    } finally {
+      setTimeout(() => {
+        setLoadingStates(prev => ({ ...prev, downloadingPlatformLogs: false }));
+      }, 1000);
+    }
+  };
+
+  // 旧ログダウンロード（互換性のため残す）
+  const downloadLogs = () => {
+    downloadLogsJson();
   };
 
   // ログをCSVでダウンロード
@@ -643,16 +794,24 @@ export default function AdminPage() {
               ログ取得
             </button>
             <button
-              onClick={downloadLogs}
+              onClick={downloadLogsJson}
               className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={logs.length === 0 || loadingStates.downloadingLogs}
             >
               {loadingStates.downloadingLogs && <Spinner />}
-              ログをダウンロード
+              JSON（クライアント生成）
+            </button>
+            <button
+              onClick={downloadLogsFromServer}
+              className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={checkedUserEmails.length === 0 || loadingStates.downloadingLogs}
+            >
+              {loadingStates.downloadingLogs && <Spinner />}
+              JSON（サーバー生成）
             </button>
             <button
               onClick={() => downloadLogsCsv(filteredLogs)}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={filteredLogs.length === 0 || loadingStates.downloadingLogs}
             >
               {loadingStates.downloadingLogs && <Spinner />}
@@ -835,8 +994,24 @@ export default function AdminPage() {
               操作ログ取得
             </button>
             <button
-              onClick={() => downloadPlatformLogsCsv(filteredPlatformLogs)}
+              onClick={downloadPlatformLogsJson}
               className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={platformLogs.length === 0 || loadingStates.downloadingPlatformLogs}
+            >
+              {loadingStates.downloadingPlatformLogs && <Spinner />}
+              JSON（クライアント生成）
+            </button>
+            <button
+              onClick={downloadPlatformLogsFromServer}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={checkedUserEmails.length === 0 || loadingStates.downloadingPlatformLogs}
+            >
+              {loadingStates.downloadingPlatformLogs && <Spinner />}
+              JSON（サーバー生成）
+            </button>
+            <button
+              onClick={() => downloadPlatformLogsCsv(filteredPlatformLogs)}
+              className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded shadow text-sm font-semibold mb-2 ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={filteredPlatformLogs.length === 0 || loadingStates.downloadingPlatformLogs}
             >
               {loadingStates.downloadingPlatformLogs && <Spinner />}
