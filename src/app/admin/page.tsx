@@ -414,11 +414,6 @@ export default function AdminPage() {
     }
   };
 
-  // 旧ログダウンロード（互換性のため残す）
-  const downloadLogs = () => {
-    downloadLogsJson();
-  };
-
   // ログをCSVでダウンロード
   function downloadLogsCsv(logs: any[]) {
     if (!logs.length) return;
