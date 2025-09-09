@@ -12,9 +12,7 @@ export default function RegisterMcpServerPage() {
     useAuthRedirect();
     useCheckUserRole(["admin", "maintainer"]);
   const router = useRouter();
-  const [name, setName] = useState("");
   const [url, setUrl] = useState("");
-  const [description, setDescription] = useState("");
   const [type, setType] = useState<"sse" | "local">("sse");
   const [error, setError] = useState("");
 
@@ -27,7 +25,7 @@ export default function RegisterMcpServerPage() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, url, description, type }),
+        body: JSON.stringify({ url, type }),
       });
 
       if (!res.ok) {
@@ -64,15 +62,6 @@ export default function RegisterMcpServerPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block font-medium">Name</label>
-            <input
-              className="w-full border p-2 rounded"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-
-          <div>
             <label className="block font-medium">URL</label>
             <input
               className="w-full border p-2 rounded"
@@ -80,16 +69,6 @@ export default function RegisterMcpServerPage() {
               onChange={(e) => setUrl(e.target.value)}
             />
           </div>
-
-          <div>
-            <label className="block font-medium">Description</label>
-            <textarea
-              className="w-full border p-2 rounded"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
-
           <div>
             <label className="block font-medium">呼び出し方式</label>
             <select
