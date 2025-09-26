@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Header from "@/components/Header";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
+import { useGetUserRole } from "@/hooks/useGetUserRole"
 
 type AgentDetail = {
   id: string;
@@ -18,10 +19,12 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:800
 
 export default function AgentMarketDetail() {
   useAuthRedirect();
+  const { userRole, loading: roleLoading } = useGetUserRole();
   const { id } = useParams();
   const router = useRouter();
   const [agent, setAgent] = useState<AgentDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     // idが無ければ何もしない
@@ -65,6 +68,43 @@ export default function AgentMarketDetail() {
     }
   };
 
+  const deleteAgent = async () => {
+    if (!agent) return;
+    
+    const confirmed = window.confirm(
+      `エージェント「${agent.name}」をマーケットから削除してもよろしいですか？\n\nこの操作は取り消すことができません。`
+    );
+    
+    if (!confirmed) return;
+
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/market/agents/delete/${agent.id}`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const detail = (err.detail as string) || res.statusText;
+        alert(`削除に失敗しました: ${detail}`);
+        return;
+      }
+
+      alert("エージェントがマーケットから削除されました。");
+      router.push("/market");
+    } catch (e) {
+      console.error(e);
+      alert("削除中にエラーが発生しました");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // ADMIN または MAINTAINER かどうかを判定
+  const canDelete = userRole === "admin" || userRole === "maintainer";
+
   if (!agent) {
     return (
       <div className="min-h-screen bg-gray-100 text-gray-900">
@@ -92,25 +132,35 @@ export default function AgentMarketDetail() {
                       </span>
                     )}
                   </h5>
-
-        <button
-          onClick={install}
-          disabled={loading || !agent.is_active}
-          className={`w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded-lg transition-opacity ${
-            (loading || !agent.is_active) ? "opacity-50 cursor-wait" : ""
-          }`}
-        >
-          {loading ? "インストール中…" : "インストール"}
-        </button>
-
-        <button
-          onClick={() => router.back()}
-          disabled={loading}
-          className="mt-4 inline-block text-gray-700 hover:underline"
-        >
-          ← 戻る
-        </button>
+                    <div className="flex gap-4 mb-4">
+                      <button
+                        onClick={install}
+                        disabled={loading || !agent.is_active}
+                        className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      >
+                        {loading ? "インストール中..." : "インストール"}
+                      </button>
+                      
+                      {canDelete && (
+                        <button
+                          onClick={deleteAgent}
+                          disabled={deleteLoading}
+                          className="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        >
+                          {deleteLoading ? "削除中..." : "削除"}
+                        </button>
+                      )}
+                    </div>
+                    
+                    <button
+                      onClick={() => router.back()}
+                      disabled={loading}
+                      className="text-gray-700 hover:underline"
+                    >
+                      ← 戻る
+                    </button>
       </main>
+      
     </div>
   );
 }

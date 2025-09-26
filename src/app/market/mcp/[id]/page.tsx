@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Header from "@/components/Header";
+import { useGetUserRole } from "@/hooks/useGetUserRole";
 
 type MarketMcpServer = {
   id: string;
@@ -18,7 +19,9 @@ export default function MarketMcpDetailPage() {
   const router = useRouter();
   const [server, setServer] = useState<MarketMcpServer | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const { userRole, loading: roleLoading } = useGetUserRole();
 
   useEffect(() => {
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
@@ -68,6 +71,45 @@ export default function MarketMcpDetailPage() {
     }
   };
 
+  const deleteMcpServer = async () => {
+    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+    if (!server) return;
+    
+    const confirmed = window.confirm(
+      `MCPサーバー「${server.name}」をマーケットから削除してもよろしいですか？\n\nこの操作は取り消すことができません。`
+    );
+    
+    if (!confirmed) return;
+
+    setDeleteLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${BACKEND_URL}/market/mcp/delete/${server.id}`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        const detail = (errBody.detail as string) || res.statusText;
+        setError(`削除に失敗しました: ${detail}`);
+        return;
+      }
+
+      alert("MCPサーバーがマーケットから削除されました。");
+      router.push("/market");
+    } catch (e) {
+      console.error(e);
+      setError("削除中にエラーが発生しました");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // ADMIN または MAINTAINER かどうかを判定
+  const canDelete = userRole === "admin" || userRole === "maintainer";
+
   if (!server) {
     return (
       <div className="min-h-screen bg-gray-100 text-gray-900">
@@ -106,18 +148,31 @@ export default function MarketMcpDetailPage() {
           <p className="mb-4 text-red-600 whitespace-pre-wrap">{error}</p>
         )}
 
-        <button
-          onClick={install}
-          disabled={loading || !server.is_active}
-          className={`bg-blue-600 text-white px-4 py-2 rounded transition-opacity ${
-            (loading || !server.is_active) ? "opacity-50 cursor-wait" : "hover:bg-blue-700"
-          }`}
-        >
-          {loading ? "インストール中…" : "インストール"}
-        </button>
+        <div className="flex gap-4 mb-4">
+          <button
+            onClick={install}
+            disabled={loading || !server.is_active}
+            className={`bg-blue-600 text-white px-4 py-2 rounded transition-opacity ${
+              (loading || !server.is_active) ? "opacity-50 cursor-wait" : "hover:bg-blue-700"
+            }`}
+          >
+            {loading ? "インストール中…" : "インストール"}
+          </button>
+          
+          {canDelete && (
+            <button
+              onClick={deleteMcpServer}
+              disabled={deleteLoading}
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {deleteLoading ? "削除中..." : "削除"}
+            </button>
+          )}
+        </div>
+        
         <button
           onClick={() => router.back()}
-          className="ml-4 text-gray-600 hover:underline"
+          className="text-gray-600 hover:underline"
         >
           ← 戻る
         </button>

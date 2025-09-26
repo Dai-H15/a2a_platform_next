@@ -633,6 +633,8 @@ export default function AdminPage() {
                 <li>User Management</li>
                 <li>Role Management</li>
                 <li>Log Management (all users)</li>
+                <li>Delete Market Agent Configure</li>
+                <li>Delete Market MCP Configure</li>
               </ul>
             </div>
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 shadow-sm">
@@ -646,6 +648,8 @@ export default function AdminPage() {
               <ul className="list-none pl-4 text-green-900 space-y-0.5 text-sm">
                 <li>Register Agent</li>
                 <li>Register MCP Server</li>
+                <li>Delete Market Agent Configure</li>
+                <li>Delete Market MCP Configure</li>
               </ul>
             </div>
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 shadow-sm">
@@ -654,6 +658,7 @@ export default function AdminPage() {
                 <li>View Agents</li>
                 <li>View MCP Servers</li>
                 <li>View Own Logs</li>
+                <li>Use Market Agents + MCP</li>
               </ul>
             </div>
           </div>
