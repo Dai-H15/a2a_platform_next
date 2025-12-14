@@ -102,8 +102,8 @@ export default function AgentMarketDetail() {
     }
   };
 
-  // ADMIN または MAINTAINER かどうかを判定
-  const canDelete = userRole === "admin" || userRole === "maintainer";
+  // ADMIN または MAINTAINER かどうかを判定（ロール読み込み中は非表示）
+  const canDelete = !roleLoading && (userRole === "admin" || userRole === "maintainer");
 
   if (!agent) {
     return (
